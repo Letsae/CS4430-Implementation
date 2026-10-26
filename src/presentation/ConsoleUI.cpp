@@ -8,9 +8,14 @@
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
-#include <windows.h>
 #include <charconv>
 #include <cctype>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 namespace Lms {
 namespace {
@@ -36,6 +41,32 @@ bool confirmAction() {
         if (input == "n") return false;
         std::cout << "Please enter y or n." << std::endl;
     }
+}
+
+std::string readPassword(const std::string& prompt) {
+    std::cout << prompt;
+    std::cout.flush();
+    std::string password;
+#ifdef _WIN32
+    HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    const bool canHideInput = GetConsoleMode(input, &mode) != 0;
+    if (canHideInput) SetConsoleMode(input, mode & ~ENABLE_ECHO_INPUT);
+    std::getline(std::cin, password);
+    if (canHideInput) SetConsoleMode(input, mode);
+#else
+    termios originalSettings{};
+    const bool canHideInput = tcgetattr(STDIN_FILENO, &originalSettings) == 0;
+    if (canHideInput) {
+        termios hiddenSettings = originalSettings;
+        hiddenSettings.c_lflag &= static_cast<tcflag_t>(~ECHO);
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &hiddenSettings);
+    }
+    std::getline(std::cin, password);
+    if (canHideInput) tcsetattr(STDIN_FILENO, TCSAFLUSH, &originalSettings);
+#endif
+    std::cout << std::endl;
+    return password;
 }
 }
 
@@ -605,32 +636,9 @@ void ConsoleUI::handleChangePassword() {
 
     std::cout << "=== Change Password ===" << std::endl;
 
-    // Get old password (secure input on Windows)
-    std::cout << "Current password: ";
-    std::string oldPassword;
-    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode = 0;
-    GetConsoleMode(hStdin, &mode);
-    SetConsoleMode(hStdin, mode & ~ENABLE_ECHO_INPUT);
-    std::getline(std::cin, oldPassword);
-    SetConsoleMode(hStdin, mode);
-    std::cout << std::endl;
-
-    // Get new password
-    std::cout << "New password (8-72 characters): ";
-    std::string newPassword;
-    SetConsoleMode(hStdin, mode & ~ENABLE_ECHO_INPUT);
-    std::getline(std::cin, newPassword);
-    SetConsoleMode(hStdin, mode);
-    std::cout << std::endl;
-
-    // Confirm new password
-    std::cout << "Confirm new password: ";
-    std::string confirmPassword;
-    SetConsoleMode(hStdin, mode & ~ENABLE_ECHO_INPUT);
-    std::getline(std::cin, confirmPassword);
-    SetConsoleMode(hStdin, mode);
-    std::cout << std::endl;
+    const std::string oldPassword = readPassword("Current password: ");
+    const std::string newPassword = readPassword("New password (8-72 characters): ");
+    const std::string confirmPassword = readPassword("Confirm new password: ");
 
     try {
         m_authService.changePassword(user->getId(), oldPassword, newPassword, confirmPassword);
