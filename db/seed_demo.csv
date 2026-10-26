@@ -1,0 +1,20 @@
+D|Computer Science
+D|Mathematics
+D|Physics
+U|admin|ADMIN||password
+U|hod_cs|HOD|Computer Science|password
+U|lecturer1|LECTURER|Computer Science|password
+U|lecturer2|LECTURER|Mathematics|password
+U|student1|STUDENT|Computer Science|password
+U|student2|STUDENT|Computer Science|password
+U|student3|STUDENT|Mathematics|password
+C|CS101|Introduction to Programming|Computer Science
+C|CS201|Data Structures|Computer Science
+C|MATH101|Calculus I|Mathematics
+L|CS101|lecturer1
+L|CS201|lecturer1
+L|MATH101|lecturer2
+E|CS101|student1
+E|CS101|student2
+E|CS201|student1
+E|MATH101|student3
