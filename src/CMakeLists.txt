@@ -20,7 +20,7 @@ target_include_directories(lms_core PUBLIC
 )
 
 target_link_libraries(lms_core PUBLIC
-    SQLite3::SQLite3
+    SQLite::SQLite3
 )
 
 # Create lms_app executable
