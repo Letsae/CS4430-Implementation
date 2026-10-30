@@ -34,6 +34,7 @@ target_include_directories(lms_integration_tests PRIVATE
 )
 target_compile_definitions(lms_integration_tests PRIVATE
     LMS_SCHEMA_PATH="${LMS_SCHEMA_PATH_VALUE}"
+    LMS_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
 )
 
 # Register tests
