@@ -9,6 +9,11 @@ SqliteEnrolmentRepository::SqliteEnrolmentRepository(Database& db, ICourseReposi
     : m_db(db), m_courseRepo(courseRepo), m_userRepo(userRepo) {}
 
 void SqliteEnrolmentRepository::enroll(int courseId, int studentId) {
+    SystemClock clock;
+    enrollAt(courseId, studentId, clock.now());
+}
+
+void SqliteEnrolmentRepository::enrollAt(int courseId, int studentId, const std::string& enrolledOn) {
     const char* sql = "INSERT INTO enrolment (course_id, student_id, enrolled_on) VALUES (?, ?, ?);";
     sqlite3_stmt* stmt = nullptr;
 
@@ -16,12 +21,9 @@ void SqliteEnrolmentRepository::enroll(int courseId, int studentId) {
         throw DatabaseException("Failed to prepare statement: " + std::string(sqlite3_errmsg(m_db.get())));
     }
 
-    SystemClock clock;
-    std::string now = clock.now();
-
     sqlite3_bind_int(stmt, 1, courseId);
     sqlite3_bind_int(stmt, 2, studentId);
-    sqlite3_bind_text(stmt, 3, now.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, enrolledOn.c_str(), -1, SQLITE_TRANSIENT);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);

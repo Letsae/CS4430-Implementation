@@ -18,6 +18,7 @@ bool Student::canPerform(Action action) const {
         case Action::SubmitAssignment:
         case Action::ViewSubmission:
         case Action::ViewOwnCourses:
+        case Action::ViewNotifications:
             return true;
         default:
             return false;
@@ -42,6 +43,7 @@ bool Lecturer::canPerform(Action action) const {
         case Action::MarkSubmission:
         case Action::ViewSubmission:
         case Action::ViewOwnCourses:
+        case Action::ViewNotifications:
             return true;
         default:
             return false;
@@ -61,8 +63,10 @@ bool HeadOfDepartment::canPerform(Action action) const {
         case Action::ChangePassword:
         case Action::ModerateSubmission:
         case Action::ReleaseMarks:
+        case Action::ViewMarkAudit:
         case Action::ViewSubmission:
         case Action::ViewOwnCourses:
+        case Action::ViewNotifications:
             return true;
         default:
             return false;
@@ -92,6 +96,7 @@ bool Administrator::canPerform(Action action) const {
         case Action::AssignLecturer:
         case Action::EnrollStudent:
         case Action::ViewOwnCourses:
+        case Action::ViewNotifications:
             return true;
         default:
             return false;
@@ -111,6 +116,10 @@ std::unique_ptr<User> UserFactory::create(Role role, int id, const std::string& 
         default:
             throw ValidationException("Invalid role");
     }
+}
+
+std::unique_ptr<User> UserFactory::create(const UserData& data) {
+    return create(data.role, data.id, data.username, data.departmentId);
 }
 
 } // namespace Lms

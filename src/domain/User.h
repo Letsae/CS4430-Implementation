@@ -48,7 +48,9 @@ enum class Action {
     MarkSubmission,
     ModerateSubmission,
     ReleaseMarks,
+    ViewMarkAudit,
     ViewSubmission,
+    ViewNotifications,
 
     // General
     Login,
@@ -146,6 +148,13 @@ public:
     bool canPerform(Action action) const override;
 };
 
+struct UserData {
+    int id;
+    std::string username;
+    Role role;
+    int departmentId;
+};
+
 /**
  * Factory for creating User objects based on role.
  */
@@ -155,6 +164,7 @@ public:
      * Create a user object based on the specified role.
      */
     static std::unique_ptr<User> create(Role role, int id, const std::string& username, int departmentId = 0);
+    static std::unique_ptr<User> create(const UserData& data);
 };
 
 } // namespace Lms

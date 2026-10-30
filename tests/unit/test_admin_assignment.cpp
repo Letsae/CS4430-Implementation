@@ -6,6 +6,7 @@
 using namespace Lms;
 
 namespace {
+constexpr char kTestTime[] = "2030-01-02T12:00:00Z";
 constexpr int kDepartmentId = 31;
 constexpr int kOtherDepartmentId = 32;
 constexpr int kCourseId = 41;
@@ -24,7 +25,7 @@ public:
 class AdminAssignmentServiceTest : public ::testing::Test {
 protected:
     AdminAssignmentServiceTest()
-        : enrolments(courses), service(users, departments, courses, enrolments, hasher, database, events),
+        : enrolments(courses), clock(kTestTime), service(users, departments, courses, enrolments, hasher, database, events, clock),
           observer(std::make_shared<AssignmentEventCounter>()) {
         departments.departments.emplace_back(kDepartmentId, "Department One");
         departments.departments.emplace_back(kOtherDepartmentId, "Department Two");
@@ -42,6 +43,7 @@ protected:
     Lms::Test::FakeEnrolmentRepository enrolments;
     Lms::Test::FakePasswordHasher hasher;
     EventPublisher events;
+    FixedClock clock;
     AdminService service;
     std::shared_ptr<AssignmentEventCounter> observer;
     int administratorId = 0;

@@ -106,6 +106,15 @@ public:
         lecturerCourseIds[lecturerId].push_back(courseId);
     }
 
+    int countEnrolledStudents(int courseId) override {
+        int count = 0;
+        for (const auto& [studentId, ids] : studentCourseIds) {
+            (void)studentId;
+            count += static_cast<int>(std::count(ids.begin(), ids.end(), courseId));
+        }
+        return count;
+    }
+
     void enroll(int studentId, int courseId) {
         studentCourseIds[studentId].push_back(courseId);
     }

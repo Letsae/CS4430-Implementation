@@ -18,6 +18,10 @@ public:
      * Enroll a student in a course.
      */
     virtual void enroll(int courseId, int studentId) = 0;
+    virtual void enrollAt(int courseId, int studentId, const std::string& enrolledOn) {
+        (void)enrolledOn;
+        enroll(courseId, studentId);
+    }
 
     /**
      * Unenroll a student from a course.
@@ -45,6 +49,7 @@ public:
     explicit SqliteEnrolmentRepository(Database& db, ICourseRepository& courseRepo, IUserRepository& userRepo);
 
     void enroll(int courseId, int studentId) override;
+    void enrollAt(int courseId, int studentId, const std::string& enrolledOn) override;
     void unenroll(int courseId, int studentId) override;
     bool isEnrolled(int courseId, int studentId) override;
     std::vector<Course> getCoursesForStudent(int studentId) override;

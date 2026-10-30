@@ -72,7 +72,7 @@ protected:
         enrolments.enroll(courseId, studentId);
         observer = std::make_shared<NotificationService>(enrolments, notifications, clock);
         events.subscribe(observer);
-        service = std::make_unique<AdminService>(users, departments, courses, enrolments, hasher, db, events);
+        service = std::make_unique<AdminService>(users, departments, courses, enrolments, hasher, db, events, clock);
     }
 
     Database db;
@@ -118,7 +118,7 @@ TEST_F(AdminAssignmentIntegrationTest, NotificationFailureRollsBackLecturerAssig
     EventPublisher failingEvents;
     auto failingObserver = std::make_shared<NotificationService>(enrolments, failingNotifications, clock);
     failingEvents.subscribe(failingObserver);
-    AdminService failingService(users, departments, courses, enrolments, hasher, db, failingEvents);
+    AdminService failingService(users, departments, courses, enrolments, hasher, db, failingEvents, clock);
     EXPECT_THROW(failingService.assignLecturerToCourse(*admin, courseId, lecturerId), DatabaseException);
     EXPECT_TRUE(courses.getByLecturer(lecturerId).empty());
     EXPECT_FALSE(db.isInTransaction());
@@ -149,4 +149,23 @@ TEST_F(AdminAssignmentIntegrationTest, ParameterizedCourseTextIsStoredLiterally)
     const int id = courses.save(Course(0, "SAFE-INJECTION-COURSE", title, departmentId));
     EXPECT_EQ(courses.getById(id)->getTitle(), title);
     EXPECT_NO_THROW(courses.getById(courseId));
+}
+
+TEST_F(AdminAssignmentIntegrationTest, EnrollsOnlyActiveStudentsOnceWithInjectedClockTimestamp) {
+    service->enrollStudent(*admin, courseId, otherStudentId);
+    EXPECT_TRUE(enrolments.isEnrolled(courseId, otherStudentId));
+    EXPECT_THROW(service->enrollStudent(*admin, courseId, otherStudentId), ValidationException);
+    EXPECT_THROW(service->enrollStudent(*lecturer, courseId, studentId), AuthorisationException);
+
+    sqlite3_stmt* statement = nullptr;
+    ASSERT_EQ(sqlite3_prepare_v2(db.get(),
+        "SELECT enrolled_on FROM enrolment WHERE course_id = ? AND student_id = ?;", -1,
+        &statement, nullptr), SQLITE_OK);
+    sqlite3_bind_int(statement, 1, courseId);
+    sqlite3_bind_int(statement, 2, otherStudentId);
+    ASSERT_EQ(sqlite3_step(statement), SQLITE_ROW);
+    const auto* stored = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
+    ASSERT_NE(stored, nullptr);
+    EXPECT_EQ(std::string(stored), clock.now());
+    sqlite3_finalize(statement);
 }
