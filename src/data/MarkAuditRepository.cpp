@@ -32,7 +32,7 @@ void SqliteMarkAuditRepository::add(const MarkAuditEntry& entry) {
 
 std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getBySubmission(int submissionId) {
     const char* sql = "SELECT id, submission_id, changed_by, changed_at, old_value, new_value, reason "
-                      "FROM mark_audit WHERE submission_id = ? ORDER BY changed_at;";
+                      "FROM mark_audit WHERE submission_id = ? ORDER BY changed_at, id;";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(m_db.get(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -52,7 +52,7 @@ std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getBySubmission(int submi
 
 std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getAll() {
     const char* sql = "SELECT id, submission_id, changed_by, changed_at, old_value, new_value, reason "
-                      "FROM mark_audit ORDER BY changed_at;";
+                      "FROM mark_audit ORDER BY changed_at, id;";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(m_db.get(), sql, -1, &stmt, nullptr) != SQLITE_OK) {

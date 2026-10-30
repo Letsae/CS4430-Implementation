@@ -104,6 +104,7 @@ void SqliteMenuRepository::initializeDefaults() {
         {"VIEW_MARKED_SUBMISSIONS", "View Marked Submissions"},
         {"MODERATE_SUBMISSION", "Moderate Submission"},
         {"RELEASE_MARKS", "Release Marks"},
+        {"VIEW_MARK_AUDIT_LOG", "View Mark Audit Log"},
         {"CREATE_USER", "Create User"},
         {"CREATE_DEPARTMENT", "Create Department"},
         {"CREATE_COURSE", "Create Course"},
@@ -126,6 +127,9 @@ void SqliteMenuRepository::initializeDefaults() {
             throw DatabaseException("Failed to insert menu item: " + std::string(sqlite3_errmsg(m_db.get())));
         }
     }
+
+    m_db.execute("UPDATE menu_item SET label = 'Review Marks' WHERE action_code = 'VIEW_MARKED_SUBMISSIONS';");
+    m_db.execute("UPDATE menu_item SET label = 'Moderate Mark' WHERE action_code = 'MODERATE_SUBMISSION';");
 
     // Map roles to menu items
     struct RoleMapping {
@@ -154,7 +158,8 @@ void SqliteMenuRepository::initializeDefaults() {
         {"HOD", "VIEW_MARKED_SUBMISSIONS", 2},
         {"HOD", "MODERATE_SUBMISSION", 3},
         {"HOD", "RELEASE_MARKS", 4},
-        {"HOD", "CHANGE_PASSWORD", 5},
+        {"HOD", "VIEW_MARK_AUDIT_LOG", 5},
+        {"HOD", "CHANGE_PASSWORD", 6},
 
         // Admin menu
         {"ADMIN", "CREATE_USER", 1},
@@ -164,6 +169,9 @@ void SqliteMenuRepository::initializeDefaults() {
         {"ADMIN", "ENROLL_STUDENT", 5},
         {"ADMIN", "CHANGE_PASSWORD", 6}
     };
+
+    // Rebuild HOD order so existing databases receive the audit option and shifted password item.
+    m_db.execute("DELETE FROM role_menu_item WHERE role = 'HOD';");
 
     // Insert role mappings
     for (const auto& mapping : mappings) {
