@@ -29,10 +29,8 @@ double StandardLatePenalty::calculatePenalty(const Submission& submission,
         return daysLateCeiled * 10.0;
     }
 
-    if (daysLateCeiled >= 4) {
-        return 100.0;
-    }
-
+    // DR2 caps the penalty at the first three started 24-hour periods.
+    // Late work from day four onward is still accepted without a penalty.
     return 0.0;
 }
 

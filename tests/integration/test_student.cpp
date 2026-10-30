@@ -57,26 +57,26 @@ protected:
     void setupTestData() {
         // Create departments
         Department csDept(0, "Computer Science");
-        int csDeptId = departmentRepo->save(csDept);
+        departmentId = departmentRepo->save(csDept);
         
         // Create users
-        std::string passwordHash = "$simple$test$test"; // Simplified for testing
-        userRepo->saveWithPassword("student1", Role::Student, passwordHash, csDeptId);
-        userRepo->saveWithPassword("student2", Role::Student, passwordHash, csDeptId);
-        userRepo->saveWithPassword("lecturer1", Role::Lecturer, passwordHash, csDeptId);
+        constexpr auto passwordHash = "test-hash";
+        student1Id = userRepo->saveWithPassword("student1", Role::Student, passwordHash, departmentId);
+        student2Id = userRepo->saveWithPassword("student2", Role::Student, passwordHash, departmentId);
+        lecturerId = userRepo->saveWithPassword("lecturer1", Role::Lecturer, passwordHash, departmentId);
         
         // Create courses
-        Course course1(0, "CS101", "Intro to Programming", csDeptId);
-        int courseId = courseRepo->save(course1);
-        courseRepo->assignLecturer(courseId, 3); // lecturer1
+        Course course1(0, "CS101", "Intro to Programming", departmentId);
+        courseId = courseRepo->save(course1);
+        courseRepo->assignLecturer(courseId, lecturerId);
         
         // Enroll students
-        enrolmentRepo->enroll(courseId, 1); // student1
-        enrolmentRepo->enroll(courseId, 2); // student2
+        enrolmentRepo->enroll(courseId, student1Id);
+        enrolmentRepo->enroll(courseId, student2Id);
         
         // Create assignment
-        Assignment assign(0, courseId, "Assignment 1", "2024-01-20T10:00:00Z", 100.0, 1);
-        assignmentRepo->save(assign);
+        Assignment assign(0, courseId, "Assignment 1", "2024-01-20T10:00:00Z", 100.0, lecturerId);
+        assignmentId = assignmentRepo->save(assign);
     }
     
     std::unique_ptr<Database> db;
@@ -90,10 +90,16 @@ protected:
     std::unique_ptr<SqliteEnrolmentRepository> enrolmentRepo;
     std::unique_ptr<FixedClock> clock;
     std::unique_ptr<StudentService> studentService;
+    int student1Id{};
+    int student2Id{};
+    int lecturerId{};
+    int courseId{};
+    int assignmentId{};
+    int departmentId{};
 };
 
 TEST_F(StudentServiceIntegrationTest, ListCoursesReturnsOnlyEnrolledCourses) {
-    auto courses = studentService->listCourses(1);
+    auto courses = studentService->listCourses(student1Id);
     
     ASSERT_EQ(courses.size(), 1);
     EXPECT_EQ(courses[0].code, "CS101");
@@ -105,21 +111,20 @@ TEST_F(StudentServiceIntegrationTest, ListCoursesReturnsOnlyEnrolledCourses) {
 
 TEST_F(StudentServiceIntegrationTest, ListCoursesReturnsEmptyForUnenrolledStudent) {
     // Create a student3 who is not enrolled
-    std::string passwordHash = "$simple$test$test";
-    userRepo->saveWithPassword("student3", Role::Student, passwordHash, 1);
+    const int student3Id = userRepo->saveWithPassword("student3", Role::Student, "test-hash", departmentId);
     
-    auto courses = studentService->listCourses(3);
+    auto courses = studentService->listCourses(student3Id);
     
     EXPECT_TRUE(courses.empty());
 }
 
 TEST_F(StudentServiceIntegrationTest, ListSubmissionsReturnsOnlyStudentSubmissions) {
     // Create a submission for student1
-    Submission sub(0, 1, 1, SubmissionState::Submitted);
+    Submission sub(0, assignmentId, student1Id, SubmissionState::Submitted);
     sub.setFirstSubmittedAt("2024-01-15T10:00:00Z");
     submissionRepo->save(sub);
     
-    auto submissions = studentService->listSubmissions(1);
+    auto submissions = studentService->listSubmissions(student1Id);
     
     ASSERT_EQ(submissions.size(), 1);
     EXPECT_EQ(submissions[0].state, "Submitted");
@@ -135,13 +140,13 @@ TEST_F(StudentServiceIntegrationTest, ListSubmissionsReturnsEmptyForStudentWithN
 
 TEST_F(StudentServiceIntegrationTest, MarkAndFeedbackHiddenWhenNotReleased) {
     // Create a submission with mark but not released state
-    Submission sub(0, 1, 1, SubmissionState::Marked);
+    Submission sub(0, assignmentId, student1Id, SubmissionState::Marked);
     sub.setFirstSubmittedAt("2024-01-15T10:00:00Z");
     sub.setFinalMark(85.0);
     sub.setFeedback("Good work");
     submissionRepo->save(sub);
     
-    auto submissions = studentService->listSubmissions(1);
+    auto submissions = studentService->listSubmissions(student1Id);
     
     ASSERT_EQ(submissions.size(), 1);
     EXPECT_FALSE(submissions[0].markReleased);
@@ -150,13 +155,13 @@ TEST_F(StudentServiceIntegrationTest, MarkAndFeedbackHiddenWhenNotReleased) {
 
 TEST_F(StudentServiceIntegrationTest, MarkAndFeedbackShownWhenReleased) {
     // Create a submission with released state
-    Submission sub(0, 1, 1, SubmissionState::Released);
+    Submission sub(0, assignmentId, student1Id, SubmissionState::Released);
     sub.setFirstSubmittedAt("2024-01-15T10:00:00Z");
     sub.setFinalMark(85.0);
     sub.setFeedback("Good work");
     submissionRepo->save(sub);
     
-    auto submissions = studentService->listSubmissions(1);
+    auto submissions = studentService->listSubmissions(student1Id);
     
     ASSERT_EQ(submissions.size(), 1);
     EXPECT_TRUE(submissions[0].markReleased);
@@ -166,10 +171,10 @@ TEST_F(StudentServiceIntegrationTest, MarkAndFeedbackShownWhenReleased) {
 
 TEST_F(StudentServiceIntegrationTest, EffectiveDeadlineWithExtension) {
     // Create an extension for student1
-    Extension ext(0, 1, 1, "2024-01-25T10:00:00Z", "Medical", 1);
+    Extension ext(0, assignmentId, student1Id, "2024-01-25T10:00:00Z", "Medical", lecturerId);
     extensionRepo->save(ext);
     
-    auto courses = studentService->listCourses(1);
+    auto courses = studentService->listCourses(student1Id);
     
     ASSERT_EQ(courses.size(), 1);
     ASSERT_EQ(courses[0].assignments.size(), 1);
@@ -178,15 +183,16 @@ TEST_F(StudentServiceIntegrationTest, EffectiveDeadlineWithExtension) {
 }
 
 TEST_F(StudentServiceIntegrationTest, SubmitRejectsEmptyContent) {
-    EXPECT_THROW(studentService->submit(1, 1, ""), ValidationException);
+    EXPECT_THROW(studentService->submit(student1Id, assignmentId, ""), ValidationException);
 }
 
 TEST_F(StudentServiceIntegrationTest, SubmitRejectsTooLongContent) {
     std::string longContent(20001, 'a');
-    EXPECT_THROW(studentService->submit(1, 1, longContent), ValidationException);
+    EXPECT_THROW(studentService->submit(student1Id, assignmentId, longContent), ValidationException);
 }
 
 TEST_F(StudentServiceIntegrationTest, SubmitRejectsNotEnrolled) {
     // student3 is not enrolled in any course
-    EXPECT_THROW(studentService->submit(3, 1, "Some content"), AuthorisationException);
+    const int student3Id = userRepo->saveWithPassword("student3", Role::Student, "test-hash", departmentId);
+    EXPECT_THROW(studentService->submit(student3Id, assignmentId, "Some content"), AuthorisationException);
 }

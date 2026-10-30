@@ -9,6 +9,10 @@
 #include "data/ExtensionRepository.h"
 #include "data/DepartmentRepository.h"
 #include "data/UserRepository.h"
+#include "data/Database.h"
+#include "data/SettingsRepository.h"
+#include "domain/LatePenaltyStrategy.h"
+#include "domain/Observer.h"
 #include "util/Clock.h"
 #include <memory>
 #include <vector>
@@ -57,6 +61,7 @@ struct SubmissionInfo {
     bool markReleased;
     double mark;
     std::string feedback;
+    std::string latestVersionSubmittedAt;
 };
 
 /**
@@ -71,6 +76,17 @@ public:
                   IExtensionRepository& extensionRepo,
                   IDepartmentRepository& departmentRepo,
                   IUserRepository& userRepo,
+                  const Clock& clock);
+    StudentService(Database& database, ICourseRepository& courseRepo,
+                  IAssignmentRepository& assignmentRepo,
+                  ISubmissionRepository& submissionRepo,
+                  ISubmissionVersionRepository& versionRepo,
+                  IExtensionRepository& extensionRepo,
+                  IDepartmentRepository& departmentRepo,
+                  IUserRepository& userRepo,
+                  ISettingsRepository& settings,
+                  ILatePenaltyStrategy& penaltyStrategy,
+                  EventPublisher& events,
                   const Clock& clock);
 
     /**
@@ -109,6 +125,11 @@ private:
     IDepartmentRepository& m_departmentRepo;
     IUserRepository& m_userRepo;
     const Clock& m_clock;
+    Database* m_database = nullptr;
+    ISettingsRepository* m_settings = nullptr;
+    StandardLatePenalty m_defaultPenalty;
+    ILatePenaltyStrategy* m_penaltyStrategy = &m_defaultPenalty;
+    EventPublisher* m_events = nullptr;
 
     /**
      * Get the effective deadline for a student (considering extensions).
@@ -124,6 +145,8 @@ private:
      * Calculate days late for a submission.
      */
     int calculateDaysLate(const std::string& submittedAt, const std::string& deadline);
+    void requireStudent(int studentId) const;
+    size_t maxSubmissionLength() const;
 };
 
 } // namespace Lms

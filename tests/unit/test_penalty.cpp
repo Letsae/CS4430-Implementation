@@ -75,7 +75,7 @@ TEST_F(PenaltyStrategyTest, 72HoursAndOneSecondLate_ZeroMark) {
     auto submission = createSubmission("2024-01-18T10:00:01Z"); // 72h + 1s late
 
     double penalty = m_strategy.calculatePenalty(submission, assignment, m_clock);
-    EXPECT_DOUBLE_EQ(penalty, 100.0); // Day 4+ = 100% penalty
+    EXPECT_DOUBLE_EQ(penalty, 0.0); // Penalties stop after day 3
 }
 
 TEST_F(PenaltyStrategyTest, FourDaysLate_ZeroMark) {
@@ -83,7 +83,7 @@ TEST_F(PenaltyStrategyTest, FourDaysLate_ZeroMark) {
     auto submission = createSubmission("2024-01-19T10:00:00Z"); // 96 hours late
 
     double penalty = m_strategy.calculatePenalty(submission, assignment, m_clock);
-    EXPECT_DOUBLE_EQ(penalty, 100.0);
+    EXPECT_DOUBLE_EQ(penalty, 0.0);
 }
 
 TEST_F(PenaltyStrategyTest, EarlySubmission_NoPenalty) {

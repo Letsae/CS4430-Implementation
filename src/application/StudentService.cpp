@@ -5,6 +5,7 @@
 #include "data/Database.h"
 #include <cmath>
 #include <chrono>
+#include <memory>
 
 namespace Lms {
 
@@ -21,7 +22,41 @@ StudentService::StudentService(ICourseRepository& courseRepo,
       m_extensionRepo(extensionRepo), m_departmentRepo(departmentRepo),
       m_userRepo(userRepo), m_clock(clock) {}
 
+StudentService::StudentService(Database& database, ICourseRepository& courseRepo,
+        IAssignmentRepository& assignmentRepo, ISubmissionRepository& submissionRepo,
+        ISubmissionVersionRepository& versionRepo, IExtensionRepository& extensionRepo,
+        IDepartmentRepository& departmentRepo, IUserRepository& userRepo,
+        ISettingsRepository& settings, ILatePenaltyStrategy& penaltyStrategy,
+        EventPublisher& events, const Clock& clock)
+    : StudentService(courseRepo, assignmentRepo, submissionRepo, versionRepo, extensionRepo,
+                     departmentRepo, userRepo, clock) {
+    m_database = &database;
+    m_settings = &settings;
+    m_penaltyStrategy = &penaltyStrategy;
+    m_events = &events;
+}
+
+void StudentService::requireStudent(int studentId) const {
+    if (!m_userRepo.exists(studentId)) throw NotFoundException("Student not found with ID: " + std::to_string(studentId));
+    auto student = m_userRepo.getById(studentId);
+    if (student->getRole() != Role::Student || !student->canPerform(Action::ViewOwnCourses))
+        throw AuthorisationException("Only students can access student records");
+    if (!m_userRepo.isActive(studentId)) throw AuthorisationException("Student account is inactive");
+}
+
+size_t StudentService::maxSubmissionLength() const {
+    if (!m_settings) return 20000;
+    const std::string configured = m_settings->getWithDefault("max_submission_length", "20000");
+    try {
+        size_t consumed = 0;
+        const auto value = std::stoull(configured, &consumed);
+        if (consumed == configured.size() && value > 0) return static_cast<size_t>(value);
+    } catch (const std::exception&) {}
+    throw ValidationException("Configured maximum submission length is invalid");
+}
+
 std::vector<CourseInfo> StudentService::listCourses(int studentId) {
+    requireStudent(studentId);
     // Get courses for student
     auto courses = m_courseRepo.getByStudent(studentId);
 
@@ -64,7 +99,7 @@ std::vector<CourseInfo> StudentService::listCourses(int studentId) {
                     throw AuthorisationException("Cannot view another student's submission");
                 }
                 assignInfo.state = stateToString(submission->getState());
-                assignInfo.versionCount = 1;
+                assignInfo.versionCount = m_versionRepo.getLatestVersion(submission->getId());
             } catch (const NotFoundException&) {
                 assignInfo.state = "NotSubmitted";
                 assignInfo.versionCount = 0;
@@ -80,6 +115,7 @@ std::vector<CourseInfo> StudentService::listCourses(int studentId) {
 }
 
 std::vector<SubmissionInfo> StudentService::listSubmissions(int studentId) {
+    requireStudent(studentId);
     auto submissions = m_submissionRepo.getByStudent(studentId);
 
     std::vector<SubmissionInfo> submissionInfos;
@@ -108,8 +144,9 @@ std::vector<SubmissionInfo> StudentService::listSubmissions(int studentId) {
                 info.daysLate = 0;
             }
 
-            // Get version count (simplified)
-            info.latestVersion = 1;
+            info.latestVersion = m_versionRepo.getLatestVersion(submission.getId());
+            if (info.latestVersion > 0)
+                info.latestVersionSubmittedAt = m_versionRepo.get(submission.getId(), info.latestVersion)->getSubmittedAt();
 
             // Mark and feedback only if Released
             if (submission.getState() == SubmissionState::Released) {
@@ -133,12 +170,15 @@ std::vector<SubmissionInfo> StudentService::listSubmissions(int studentId) {
 }
 
 void StudentService::submit(int studentId, int assignmentId, const std::string& content) {
+    requireStudent(studentId);
     // Validate content
     if (content.empty()) {
         throw ValidationException("Submission content cannot be empty");
     }
-    if (content.length() > 20000) {
-        throw ValidationException("Submission content exceeds maximum length of 20000 characters");
+    const size_t maxLength = maxSubmissionLength();
+    if (content.length() > maxLength) {
+        throw ValidationException("Submission content exceeds the configured maximum length of " +
+                                  std::to_string(maxLength) + " characters");
     }
 
     // Get assignment
@@ -193,9 +233,8 @@ void StudentService::submit(int studentId, int assignmentId, const std::string& 
     // Create submission version
     SubmissionVersion version(submissionId, nextVersion, content, now);
 
-    // Note: In a full implementation, we would use TransactionGuard here
-    // to ensure both submission and version are saved atomically.
-    // For now, we'll save in sequence (version last so submission ID exists)
+    std::unique_ptr<TransactionGuard> transaction;
+    if (m_database) transaction = std::make_unique<TransactionGuard>(*m_database);
 
     if (!hasExisting) {
         // Create new submission
@@ -207,14 +246,13 @@ void StudentService::submit(int studentId, int assignmentId, const std::string& 
             submission.setState(SubmissionState::Late);
 
             // Calculate penalty
-            StandardLatePenalty penaltyStrategy;
-            double penalty = penaltyStrategy.calculatePenalty(submission, *assignment, m_clock);
+            auto effectiveAssignment = *assignment;
+            effectiveAssignment.setDeadline(effectiveDeadline);
+            double penalty = m_penaltyStrategy->calculatePenalty(submission, effectiveAssignment, m_clock);
             submission.setPenaltyPercent(penalty);
 
             // Publish late submission event
-            LateSubmissionEvent event(0, studentId, assignmentId);
-            // Note: EventPublisher would need to be injected into StudentService
-            // For now, we'll skip event publishing
+            (void)submission;
         } else {
             submission.setState(SubmissionState::Submitted);
         }
@@ -226,6 +264,12 @@ void StudentService::submit(int studentId, int assignmentId, const std::string& 
 
     // Save version
     m_versionRepo.save(version);
+    if (!hasExisting && m_events) {
+        auto saved = m_submissionRepo.getById(submissionId);
+        if (saved->getState() == SubmissionState::Late)
+            m_events->publish(LateSubmissionEvent(submissionId, studentId, assignmentId));
+    }
+    if (transaction) transaction->commit();
 }
 
 std::string StudentService::getEffectiveDeadline(int assignmentId, int studentId) {
@@ -256,14 +300,13 @@ int StudentService::calculateDaysLate(const std::string& submittedAt, const std:
     auto submittedTime = TimeUtils::fromIsoString(submittedAt);
     auto deadlineTime = TimeUtils::fromIsoString(deadline);
 
-    auto duration = std::chrono::duration_cast<std::chrono::hours>(submittedTime - deadlineTime);
-    double hoursLate = static_cast<double>(duration.count());
-
-    if (hoursLate <= 0) {
+    const auto duration = std::chrono::duration_cast<std::chrono::seconds>(submittedTime - deadlineTime);
+    const auto secondsLate = duration.count();
+    if (secondsLate <= 0) {
         return 0;
     }
-
-    return static_cast<int>(std::ceil(hoursLate / 24.0));
+    constexpr long long kSecondsPerDay = 24 * 60 * 60;
+    return static_cast<int>((secondsLate + kSecondsPerDay - 1) / kSecondsPerDay);
 }
 
 } // namespace Lms
