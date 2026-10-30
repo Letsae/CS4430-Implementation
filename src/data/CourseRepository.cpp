@@ -222,6 +222,24 @@ void SqliteCourseRepository::assignLecturer(int courseId, int lecturerId) {
     sqlite3_finalize(stmt);
 }
 
+int SqliteCourseRepository::countEnrolledStudents(int courseId) {
+    const char* sql = "SELECT COUNT(*) FROM enrolment e JOIN app_user u ON u.id = e.student_id "
+                      "WHERE e.course_id = ? AND u.role = 'STUDENT' AND u.active = 1;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db.get(), sql, -1, &stmt, nullptr) != SQLITE_OK)
+        throw DatabaseException("Failed to prepare enrollment count: " + std::string(sqlite3_errmsg(m_db.get())));
+    sqlite3_bind_int(stmt, 1, courseId);
+    const int rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW) {
+        const std::string error = sqlite3_errmsg(m_db.get());
+        sqlite3_finalize(stmt);
+        throw DatabaseException("Failed to count enrolled students: " + error);
+    }
+    const int count = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return count;
+}
+
 Course SqliteCourseRepository::fromRow(sqlite3_stmt* stmt) {
     int id = sqlite3_column_int(stmt, 0);
     std::string code(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));

@@ -25,6 +25,18 @@ std::vector<Course> AssignmentService::listLecturerCourses(const User& lecturer)
     return m_courses.getByLecturer(lecturer.getId());
 }
 
+int AssignmentService::getEnrolledStudentCount(const User& lecturer, int courseId) const {
+    if (lecturer.getRole() != Role::Lecturer || !lecturer.canPerform(Action::ViewOwnCourses))
+        throw AuthorisationException("Only lecturers can view their courses");
+    if (!m_courses.exists(courseId)) throw NotFoundException("Course not found with ID: " + std::to_string(courseId));
+    const auto courses = m_courses.getByLecturer(lecturer.getId());
+    if (std::none_of(courses.begin(), courses.end(), [courseId](const Course& course) {
+            return course.getId() == courseId;
+        }))
+        throw AuthorisationException("Course is outside your assigned courses");
+    return m_courses.countEnrolledStudents(courseId);
+}
+
 std::string AssignmentService::trim(const std::string& value) {
     auto first = std::find_if_not(value.begin(), value.end(), [](unsigned char c) { return std::isspace(c); });
     auto last = std::find_if_not(value.rbegin(), value.rend(), [](unsigned char c) { return std::isspace(c); }).base();

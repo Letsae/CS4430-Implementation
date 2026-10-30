@@ -36,6 +36,7 @@ public:
      * Assign a lecturer to a course.
      */
     virtual void assignLecturer(int courseId, int lecturerId) = 0;
+    virtual int countEnrolledStudents(int courseId) = 0;
 };
 
 class SqliteCourseRepository : public ICourseRepository {
@@ -53,6 +54,7 @@ public:
     std::vector<Course> getByLecturer(int lecturerId) override;
     std::vector<std::string> getLecturerUsernames(int courseId) override;
     void assignLecturer(int courseId, int lecturerId) override;
+    int countEnrolledStudents(int courseId) override;
 
 private:
     Database& m_db;

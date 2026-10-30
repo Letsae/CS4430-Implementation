@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS assignment (
     FOREIGN KEY (created_by) REFERENCES app_user(id)
 );
 
+-- Enforce application-level uniqueness even when concurrent requests race.
+CREATE UNIQUE INDEX IF NOT EXISTS one_assignment_title_per_course
+    ON assignment(course_id, title COLLATE NOCASE);
+
 -- Extension table
 CREATE TABLE IF NOT EXISTS extension (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,6 +77,9 @@ CREATE TABLE IF NOT EXISTS extension (
     FOREIGN KEY (student_id) REFERENCES app_user(id),
     FOREIGN KEY (granted_by) REFERENCES app_user(id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS one_extension_per_assignment_student
+    ON extension(assignment_id, student_id);
 
 -- Submission table
 CREATE TABLE IF NOT EXISTS submission (
@@ -88,6 +95,9 @@ CREATE TABLE IF NOT EXISTS submission (
     FOREIGN KEY (assignment_id) REFERENCES assignment(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES app_user(id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS one_submission_per_assignment_student
+    ON submission(assignment_id, student_id);
 
 -- Submission Version table
 CREATE TABLE IF NOT EXISTS submission_version (
@@ -111,6 +121,18 @@ CREATE TABLE IF NOT EXISTS mark_audit (
     FOREIGN KEY (submission_id) REFERENCES submission(id) ON DELETE CASCADE,
     FOREIGN KEY (changed_by) REFERENCES app_user(id)
 );
+
+CREATE TRIGGER IF NOT EXISTS mark_audit_no_update
+BEFORE UPDATE ON mark_audit
+BEGIN
+    SELECT RAISE(ABORT, 'mark_audit is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS mark_audit_no_delete
+BEFORE DELETE ON mark_audit
+BEGIN
+    SELECT RAISE(ABORT, 'mark_audit is append-only');
+END;
 
 -- Notification table
 CREATE TABLE IF NOT EXISTS notification (

@@ -75,17 +75,19 @@ private:
 
 class MarksReleasedEvent : public Event {
 public:
-    MarksReleasedEvent(int courseId, int departmentId)
-        : m_courseId(courseId), m_departmentId(departmentId) {}
+    MarksReleasedEvent(int courseId, int departmentId, std::vector<int> studentIds)
+        : m_courseId(courseId), m_departmentId(departmentId), m_studentIds(std::move(studentIds)) {}
 
     std::string getType() const override { return "MarksReleased"; }
 
     int getCourseId() const { return m_courseId; }
     int getDepartmentId() const { return m_departmentId; }
+    const std::vector<int>& getStudentIds() const { return m_studentIds; }
 
 private:
     int m_courseId;
     int m_departmentId;
+    std::vector<int> m_studentIds;
 };
 
 class MarkChangedEvent : public Event {
@@ -137,6 +139,26 @@ private:
     int m_lecturerId;
     int m_courseId;
     std::string m_courseCode;
+};
+
+class ExtensionGrantedEvent : public Event {
+public:
+    ExtensionGrantedEvent(int studentId, int assignmentId, std::string newDeadline,
+                         std::string reason, bool updated)
+        : m_studentId(studentId), m_assignmentId(assignmentId), m_newDeadline(std::move(newDeadline)),
+          m_reason(std::move(reason)), m_updated(updated) {}
+    std::string getType() const override { return "ExtensionGranted"; }
+    int getStudentId() const { return m_studentId; }
+    int getAssignmentId() const { return m_assignmentId; }
+    const std::string& getNewDeadline() const { return m_newDeadline; }
+    const std::string& getReason() const { return m_reason; }
+    bool wasUpdated() const { return m_updated; }
+private:
+    int m_studentId;
+    int m_assignmentId;
+    std::string m_newDeadline;
+    std::string m_reason;
+    bool m_updated;
 };
 
 } // namespace Lms

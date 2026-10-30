@@ -20,6 +20,7 @@ public:
     AssignmentService(Database& db, ICourseRepository& courses, IAssignmentRepository& assignments,
                       EventPublisher& events, const Clock& clock);
     std::vector<Course> listLecturerCourses(const User& lecturer) const;
+    int getEnrolledStudentCount(const User& lecturer, int courseId) const;
     void validateTitle(const std::string& title) const;
     void validateTitleForCourse(int courseId, const std::string& title) const;
     void validateMaximumMark(double maxMark) const;

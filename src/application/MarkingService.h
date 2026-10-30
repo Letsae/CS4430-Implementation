@@ -6,6 +6,10 @@
 #include "data/AssignmentRepository.h"
 #include "data/ExtensionRepository.h"
 #include "data/MarkAuditRepository.h"
+#include "data/CourseRepository.h"
+#include "data/Database.h"
+#include "data/SubmissionVersionRepository.h"
+#include "data/UserRepository.h"
 #include "domain/LatePenaltyStrategy.h"
 #include "domain/Observer.h"
 #include "util/Clock.h"
@@ -13,14 +17,26 @@
 
 namespace Lms {
 
+struct LecturerSubmissionInfo {
+    Submission submission;
+    std::string student;
+    std::string courseCode;
+    std::string assignmentTitle;
+    std::string latestVersionSubmittedAt;
+};
+
 /**
  * Service for marking submissions and applying penalties.
  */
 class MarkingService {
 public:
-    MarkingService(ISubmissionRepository& submissionRepo,
+    MarkingService(Database& database,
+                   ISubmissionRepository& submissionRepo,
                    IMarkAuditRepository& auditRepo,
                    IAssignmentRepository& assignmentRepo,
+                   ICourseRepository& courseRepo,
+                   ISubmissionVersionRepository& versionRepo,
+                   IUserRepository& userRepo,
                    IExtensionRepository& extensionRepo,
                    ILatePenaltyStrategy& penaltyStrategy,
                    EventPublisher& eventPublisher,
@@ -34,15 +50,11 @@ public:
      * @param feedback The feedback text
      * @throws AuthorisationException if user is not the lecturer
      */
-    void markSubmission(int submissionId, int lecturerId, double rawMark, const std::string& feedback);
-
-    /**
-     * Apply late penalty to a submission.
-     * @param submissionId The submission ID
-     * @param changedBy The user ID applying the penalty
-     * @param reason The reason for penalty application
-     */
-    void applyLatePenalty(int submissionId, int changedBy, const std::string& reason);
+    void markSubmission(const User& lecturer, int submissionId, double rawMark,
+                        const std::string& feedback, const std::string& reason);
+    std::vector<Assignment> listAssignments(const User& lecturer) const;
+    std::vector<LecturerSubmissionInfo> listSubmissions(const User& lecturer, int assignmentId) const;
+    static constexpr const char* InitialMarkReason = "INITIAL_MARKING";
 
     /**
      * Calculate the final mark with penalty.
@@ -50,9 +62,13 @@ public:
     double calculateFinalMark(const Submission& submission, const Assignment& assignment);
 
 private:
+    Database& m_database;
     ISubmissionRepository& m_submissionRepo;
     IMarkAuditRepository& m_auditRepo;
     IAssignmentRepository& m_assignmentRepo;
+    ICourseRepository& m_courseRepo;
+    ISubmissionVersionRepository& m_versionRepo;
+    IUserRepository& m_userRepo;
     IExtensionRepository& m_extensionRepo;
     ILatePenaltyStrategy& m_penaltyStrategy;
     EventPublisher& m_eventPublisher;
@@ -67,6 +83,9 @@ private:
      * Round a mark to 2 decimal places, half up.
      */
     double roundMark(double mark);
+    void requireLecturerForAssignment(const User& lecturer, int assignmentId) const;
+    static void requireFeedback(const std::string& feedback);
+    static void requireReason(const std::string& reason);
 };
 
 } // namespace Lms
