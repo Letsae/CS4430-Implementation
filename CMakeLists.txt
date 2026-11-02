@@ -41,7 +41,6 @@ add_library(lms_bcrypt STATIC
 )
 target_include_directories(lms_bcrypt PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/include/bcrypt
 )
 
 target_include_directories(lms_bcrypt PRIVATE
