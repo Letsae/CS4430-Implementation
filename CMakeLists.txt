@@ -39,8 +39,14 @@ add_library(lms_bcrypt STATIC
   third_party/libbcrypt/src/crypt_gensalt.c
   third_party/libbcrypt/src/wrapper.c
 )
-target_include_directories(lms_bcrypt PUBLIC third_party/libbcrypt/include)
-target_include_directories(lms_bcrypt PRIVATE third_party/libbcrypt/src)
+target_include_directories(lms_bcrypt PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/include/bcrypt
+)
+
+target_include_directories(lms_bcrypt PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/src
+)
 if(WIN32)
   target_link_libraries(lms_bcrypt PUBLIC advapi32)
 endif()
