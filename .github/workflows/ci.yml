@@ -11,41 +11,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cmake g++ libsqlite3-dev lcov
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libsqlite3-dev lcov
 
-    - name: Configure CMake
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
 
-    - name: Build
-      run: cmake --build build -- -j$(nproc)
+      - name: Build
+        run: cmake --build build -- -j$(nproc)
 
-    - name: Run tests
-      run: |
-        cd build
-        ctest --output-on-failure
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure
 
-    - name: Generate coverage report
-      run: |
-        lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-        lcov --remove coverage.info '/usr/*' '*/googletest/*' '*/tests/*' --output-file coverage.info
-        lcov --list coverage.info
+      - name: Generate coverage report
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/googletest/*' '*/tests/*' --output-file coverage.info
+          lcov --list coverage.info
 
-    - name: Generate business logic coverage
-      run: |
-        lcov --extract coverage.info \
-          '*/src/application/*' \
-          '*/src/domain/*' \
-          --output-file business-logic.info
-        lcov --summary business-logic.info
+      - name: Generate business logic coverage
+        run: |
+          lcov --extract coverage.info \
+            '*/src/application/*' \
+            '*/src/domain/*' \
+            --output-file business-logic.info
+          lcov --summary business-logic.info
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage.info
-        fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.info
+          fail_ci_if_error: false
