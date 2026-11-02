@@ -11,6 +11,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 # Find SQLite3
 find_package(SQLite3 REQUIRED)
+if(NOT TARGET SQLite3::SQLite3)
+    add_library(SQLite3::SQLite3 INTERFACE IMPORTED)
+    set_target_properties(SQLite3::SQLite3 PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${SQLite3_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "${SQLite3_LIBRARIES}"
+    )
+endif()
 
 # Enable testing
 enable_testing()

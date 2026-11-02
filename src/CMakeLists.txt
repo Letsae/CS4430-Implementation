@@ -20,7 +20,7 @@ target_include_directories(lms_core PUBLIC
 )
 
 target_link_libraries(lms_core PUBLIC
-    ${SQLite3_LIBRARIES}
+    SQLite3::SQLite3
     lms_bcrypt
 )
 
