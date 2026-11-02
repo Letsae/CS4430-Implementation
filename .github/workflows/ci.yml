@@ -36,6 +36,14 @@ jobs:
         lcov --remove coverage.info '/usr/*' '*/googletest/*' '*/tests/*' --output-file coverage.info
         lcov --list coverage.info
 
+    - name: Generate business logic coverage
+      run: |
+        lcov --extract coverage.info \
+          '*/src/application/*' \
+          '*/src/domain/*' \
+          --output-file business-logic.info
+        lcov --summary business-logic.info
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
