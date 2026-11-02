@@ -30,14 +30,22 @@ jobs:
         cd build
         ctest --output-on-failure
 
-    - name: Generate coverage report
-      run: |
-        lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-        lcov --remove coverage.info '/usr/*' '*/googletest/*' '*/tests/*' --output-file coverage.info
-        lcov --list coverage.info
+          - name: Generate coverage report
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/googletest/*' '*/tests/*' --output-file coverage.info
+          lcov --list coverage.info
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage.info
-        fail_ci_if_error: false
+      - name: Generate business logic coverage
+        run: |
+          lcov --extract coverage.info \
+            '*/src/application/*' \
+            '*/src/domain/*' \
+            --output-file business-logic.info
+          lcov --summary business-logic.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.info
+          fail_ci_if_error: false
