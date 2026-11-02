@@ -20,7 +20,8 @@ target_include_directories(lms_core PUBLIC
 )
 
 target_link_libraries(lms_core PUBLIC
-    SQLite::SQLite3
+    SQLite3::SQLite3
+    lms_bcrypt
 )
 
 # Create lms_app executable
@@ -33,7 +34,7 @@ file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}/db/schema.sql" LMS_SCHEMA_PATH_VALUE)
 target_compile_definitions(lms_app PRIVATE
     LMS_SCHEMA_PATH="${LMS_SCHEMA_PATH_VALUE}"
 )
-file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}/db/seed_demo.csv" LMS_DEMO_SEED_PATH_VALUE)
+file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}/db/seed_demo.sql" LMS_DEMO_SEED_PATH_VALUE)
 target_compile_definitions(lms_app PRIVATE
     LMS_DEMO_SEED_PATH="${LMS_DEMO_SEED_PATH_VALUE}"
 )

@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
 #include "application/ModerationService.h"
+#include "application/AdminService.h"
 #include "application/MarkingService.h"
 #include "application/AssignmentService.h"
+#include "application/ExtensionService.h"
 #include "application/NotificationService.h"
 #include "application/StudentService.h"
 #include "data/AssignmentRepository.h"
@@ -16,6 +18,7 @@
 #include "data/SubmissionVersionRepository.h"
 #include "data/UserRepository.h"
 #include "domain/LmsException.h"
+#include "security/BcryptPasswordHasher.h"
 #include "support/SchemaPath.h"
 #include "support/TestData.h"
 
@@ -191,6 +194,17 @@ TEST_F(ModerationWorkflowIntegrationTest, ReleaseRollsBackWhenStudentNotificatio
 }
 
 TEST_F(ModerationWorkflowIntegrationTest, EndToEndWorkflow) {
+    constexpr char kWorkflowDepartment[] = "workflow-department";
+    constexpr char kWorkflowHodName[] = "workflow-hod";
+    constexpr char kWorkflowLecturerName[] = "workflow-lecturer";
+    constexpr char kWorkflowStudentAName[] = "workflow-student-a";
+    constexpr char kWorkflowStudentBName[] = "workflow-student-b";
+    constexpr char kWorkflowStudentCName[] = "workflow-student-c";
+    constexpr char kWorkflowCourseCode[] = "WORKFLOW-101";
+    constexpr char kWorkflowCourseTitle[] = "Workflow course";
+    constexpr char kWorkflowPassword[] = "workflow-test-password";
+    constexpr char kWorkflowAssignmentTitle[] = "End-to-end assignment";
+    constexpr char kWorkflowDeadlineLocal[] = "2035-06-01 14:00";
     constexpr char kLateTime[] = "2035-06-02T12:00:00Z";
     constexpr char kExtensionDeadline[] = "2035-06-05T12:00:00Z";
     constexpr char kExtensionReason[] = "Approved access arrangement";
@@ -202,38 +216,63 @@ TEST_F(ModerationWorkflowIntegrationTest, EndToEndWorkflow) {
     constexpr double kStudentBRaw = 70.0;
     constexpr double kStudentBAdjusted = 60.0;
 
-    // Reuse the generated admin-owned department/course/enrolments and create
-    // this assignment through the lecturer application service.
+    // Create every account, department, course, assignment, enrolment, and
+    // extension through the application services using generated repository IDs.
     LmsTestData::TestData data(database);
-    auto lecturer = users.getById(lecturerId);
-    courses.assignLecturer(courseId, lecturerId);
+    BcryptPasswordHasher testHasher(4);
+    const int workflowAdminId = data.makeUser(Role::Administrator);
+    auto workflowAdmin = users.getById(workflowAdminId);
+    AdminService adminService(users, departments, courses, enrolments, testHasher,
+                              database, events, clock);
+    const int workflowDepartmentId = adminService.createDepartment(*workflowAdmin, kWorkflowDepartment);
+    const int workflowHodId = adminService.createUser(*workflowAdmin, kWorkflowHodName,
+        Role::HeadOfDepartment, kWorkflowPassword, workflowDepartmentId);
+    const int workflowLecturerId = adminService.createUser(*workflowAdmin, kWorkflowLecturerName,
+        Role::Lecturer, kWorkflowPassword, workflowDepartmentId);
+    const int workflowStudentAId = adminService.createUser(*workflowAdmin, kWorkflowStudentAName,
+        Role::Student, kWorkflowPassword, workflowDepartmentId);
+    const int workflowStudentBId = adminService.createUser(*workflowAdmin, kWorkflowStudentBName,
+        Role::Student, kWorkflowPassword, workflowDepartmentId);
+    const int workflowStudentCId = adminService.createUser(*workflowAdmin, kWorkflowStudentCName,
+        Role::Student, kWorkflowPassword, workflowDepartmentId);
+    const int workflowCourseId = adminService.createCourse(*workflowAdmin, kWorkflowCourseCode,
+        kWorkflowCourseTitle, workflowDepartmentId);
+    adminService.assignLecturerToCourse(*workflowAdmin, workflowCourseId, workflowLecturerId);
+    adminService.enrollStudent(*workflowAdmin, workflowCourseId, workflowStudentAId);
+    adminService.enrollStudent(*workflowAdmin, workflowCourseId, workflowStudentBId);
+    adminService.enrollStudent(*workflowAdmin, workflowCourseId, workflowStudentCId);
+
+    auto lecturer = users.getById(workflowLecturerId);
+    auto workflowHod = users.getById(workflowHodId);
     AssignmentService assignmentService(database, courses, assignments, events, clock);
-    const int assignment = assignmentService.createAssignment(*lecturer, courseId,
-        "End-to-end assignment", "2035-06-01 14:00", kMaximumMark).assignment.getId();
-    auto studentCId = data.makeUser(Role::Student, departmentId);
-    data.makeEnrolment(courseId, studentCId);
-    auto extension = Extension(0, assignment, studentCId, kExtensionDeadline,
-                               kExtensionReason, lecturerId);
-    extensions.save(extension);
+    const int assignment = assignmentService.createAssignment(*lecturer, workflowCourseId,
+        kWorkflowAssignmentTitle, kWorkflowDeadlineLocal, kMaximumMark).assignment.getId();
+    ExtensionService extensionService(database, assignments, courses, enrolments,
+                                      extensions, users, events, clock);
+    extensionService.grantExtension(*lecturer, assignment, workflowStudentCId,
+                                    kExtensionDeadline, kExtensionReason);
 
     FixedClock onTimeClock("2035-05-31T12:00:00Z");
     StudentService onTimeStudents(courses, assignments, submissions, versions,
                                   extensions, departments, users, onTimeClock);
-    onTimeStudents.submit(studentAId, assignment, "Student A first version");
-    onTimeStudents.submit(studentAId, assignment, "Student A resubmission");
-    ASSERT_EQ(versions.getLatestVersion(
-        submissions.getByAssignmentAndStudent(assignment, studentAId)->getId()), 2);
+    onTimeStudents.submit(workflowStudentAId, assignment, "Student A first version");
+    onTimeStudents.submit(workflowStudentAId, assignment, "Student A resubmission");
+    const int studentASubmission = submissions.getByAssignmentAndStudent(
+        assignment, workflowStudentAId)->getId();
+    ASSERT_EQ(versions.getLatestVersion(studentASubmission), 2);
 
     FixedClock afterDeadlineClock(kLateTime);
     StudentService afterDeadlineStudents(courses, assignments, submissions, versions,
                                          extensions, departments, users, afterDeadlineClock);
-    afterDeadlineStudents.submit(studentBId, assignment, "Student B late work");
-    afterDeadlineStudents.submit(studentCId, assignment, "Student C extended work");
+    afterDeadlineStudents.submit(workflowStudentBId, assignment, "Student B late work");
+    afterDeadlineStudents.submit(workflowStudentCId, assignment, "Student C extended work");
 
-    int studentASubmission = submissions.getByAssignmentAndStudent(assignment, studentAId)->getId();
-    int studentBSubmission = submissions.getByAssignmentAndStudent(assignment, studentBId)->getId();
-    int studentCSubmission = submissions.getByAssignmentAndStudent(assignment, studentCId)->getId();
+    const int studentBSubmission = submissions.getByAssignmentAndStudent(
+        assignment, workflowStudentBId)->getId();
+    const int studentCSubmission = submissions.getByAssignmentAndStudent(
+        assignment, workflowStudentCId)->getId();
     EXPECT_EQ(submissions.getById(studentBSubmission)->getState(), SubmissionState::Late);
+    EXPECT_EQ(submissions.getById(studentCSubmission)->getState(), SubmissionState::Submitted);
 
     StandardLatePenalty penalty;
     MarkingService marking(database, submissions, audit, assignments, courses, versions,
@@ -247,18 +286,21 @@ TEST_F(ModerationWorkflowIntegrationTest, EndToEndWorkflow) {
     EXPECT_DOUBLE_EQ(submissions.getById(studentBSubmission)->getPenaltyPercent(), 10.0);
     EXPECT_DOUBLE_EQ(submissions.getById(studentCSubmission)->getPenaltyPercent(), 0.0);
 
-    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(studentAId).back().markReleased);
-    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(studentBId).back().markReleased);
-    service->approveSubmission(*hod, studentASubmission, kModerationReason);
-    service->adjustSubmissionMark(*hod, studentBSubmission, kStudentBAdjusted, kAdjustmentReason);
-    service->approveSubmission(*hod, studentCSubmission, kModerationReason);
-    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(studentBId).back().markReleased);
-    EXPECT_THROW(service->releaseAssignmentMarks(*otherHod, assignment), AuthorisationException);
-    service->releaseAssignmentMarks(*hod, assignment);
+    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(workflowStudentAId).back().markReleased);
+    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(workflowStudentBId).back().markReleased);
+    ModerationService workflowModeration(database, submissions, audit, courses, assignments,
+        users, events, clock);
+    workflowModeration.approveSubmission(*workflowHod, studentASubmission, kModerationReason);
+    workflowModeration.adjustSubmissionMark(*workflowHod, studentBSubmission,
+        kStudentBAdjusted, kAdjustmentReason);
+    workflowModeration.approveSubmission(*workflowHod, studentCSubmission, kModerationReason);
+    EXPECT_FALSE(afterDeadlineStudents.listSubmissions(workflowStudentBId).back().markReleased);
+    EXPECT_THROW(workflowModeration.releaseAssignmentMarks(*otherHod, assignment), AuthorisationException);
+    workflowModeration.releaseAssignmentMarks(*workflowHod, assignment);
 
-    const auto releasedA = afterDeadlineStudents.listSubmissions(studentAId);
-    const auto releasedB = afterDeadlineStudents.listSubmissions(studentBId);
-    const auto releasedC = afterDeadlineStudents.listSubmissions(studentCId);
+    const auto releasedA = afterDeadlineStudents.listSubmissions(workflowStudentAId);
+    const auto releasedB = afterDeadlineStudents.listSubmissions(workflowStudentBId);
+    const auto releasedC = afterDeadlineStudents.listSubmissions(workflowStudentCId);
     ASSERT_TRUE(releasedA.back().markReleased);
     ASSERT_TRUE(releasedB.back().markReleased);
     ASSERT_TRUE(releasedC.back().markReleased);
@@ -267,13 +309,13 @@ TEST_F(ModerationWorkflowIntegrationTest, EndToEndWorkflow) {
     EXPECT_DOUBLE_EQ(releasedC.back().mark, kMaximumMark);
     EXPECT_EQ(releasedB.back().feedback, kFeedback);
 
-    const auto bAudit = service->auditForSubmission(*hod, studentBSubmission);
+    const auto bAudit = workflowModeration.auditForSubmission(*workflowHod, studentBSubmission);
     ASSERT_EQ(bAudit.size(), 2u);
     const auto adjustment = std::find_if(bAudit.begin(), bAudit.end(), [kAdjustmentReason](const MarkAuditEntry& entry) {
         return entry.getReason() == kAdjustmentReason;
     });
     ASSERT_NE(adjustment, bAudit.end());
-    EXPECT_EQ(adjustment->getChangedBy(), hodId);
+    EXPECT_EQ(adjustment->getChangedBy(), workflowHodId);
     EXPECT_DOUBLE_EQ(adjustment->getOldValue(), 60.0);
     EXPECT_DOUBLE_EQ(adjustment->getNewValue(), 50.0);
 }

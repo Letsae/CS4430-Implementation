@@ -3,6 +3,7 @@
 #include "Entities.h"
 #include "util/Clock.h"
 #include <memory>
+#include <chrono>
 
 namespace Lms {
 
@@ -26,14 +27,21 @@ public:
 };
 
 /**
- * Standard late penalty: 10% of max mark per started 24-hour period for days 1-3,
- * 100% (zero mark) from day 4 onwards.
+ * Standard late penalty: configured percentage for each started day, capped by
+ * the configured number of penalty days. Later work remains accepted at zero penalty.
  */
 class StandardLatePenalty : public ILatePenaltyStrategy {
 public:
+    explicit StandardLatePenalty(double percentPerDay = 10.0, int maximumPenaltyDays = 3,
+                                 int secondsPerDay = 86400);
     double calculatePenalty(const Submission& submission,
                             const Assignment& assignment,
                             const Clock& clock) const override;
+
+private:
+    double m_percentPerDay;
+    int m_maximumPenaltyDays;
+    int m_secondsPerDay;
 };
 
 /**

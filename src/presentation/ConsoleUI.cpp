@@ -12,6 +12,7 @@
 #include <cctype>
 #ifdef _WIN32
 #include <windows.h>
+#include <conio.h>
 #else
 #include <termios.h>
 #include <unistd.h>
@@ -19,15 +20,28 @@
 
 namespace Lms {
 namespace {
-int readBoundedNumber(const std::string& prompt, int maximum) {
+std::string submissionStateLabel(SubmissionState state) {
+    switch (state) {
+        case SubmissionState::NotSubmitted: return "Not Submitted";
+        case SubmissionState::Submitted: return "Submitted";
+        case SubmissionState::Late: return "Late";
+        case SubmissionState::Marked: return "Marked";
+        case SubmissionState::Moderated: return "Moderated";
+        case SubmissionState::Released: return "Released";
+    }
+    return "Unknown";
+}
+
+int readBoundedNumber(const std::string& prompt, int maximum, bool allowCancel = false) {
     while (true) {
         std::cout << prompt;
         std::string input;
         if (!std::getline(std::cin, input)) return 0;
         int value = 0;
         const auto parsed = std::from_chars(input.data(), input.data() + input.size(), value);
-        if (parsed.ec == std::errc{} && parsed.ptr == input.data() + input.size() && value >= 1 && value <= maximum) return value;
-        std::cout << "Invalid choice. Please enter a number from 1 to " << maximum << "." << std::endl;
+        const int minimum = allowCancel ? 0 : 1;
+        if (parsed.ec == std::errc{} && parsed.ptr == input.data() + input.size() && value >= minimum && value <= maximum) return value;
+        std::cout << "Invalid choice. Please enter a number from " << minimum << " to " << maximum << "." << std::endl;
     }
 }
 
@@ -50,10 +64,34 @@ std::string readPassword(const std::string& prompt) {
 #ifdef _WIN32
     HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
-    const bool canHideInput = GetConsoleMode(input, &mode) != 0;
-    if (canHideInput) SetConsoleMode(input, mode & ~ENABLE_ECHO_INPUT);
-    std::getline(std::cin, password);
-    if (canHideInput) SetConsoleMode(input, mode);
+    const bool isConsole = input != INVALID_HANDLE_VALUE && GetConsoleMode(input, &mode) != 0;
+    if (isConsole) {
+        // Read directly from the Windows console to avoid stdin buffering
+        // problems when changing console echo mode.
+        for (;;) {
+            const int ch = _getch();
+            if (ch == '\r' || ch == '\n') break;
+            if (ch == 3) { password.clear(); break; }
+            if (ch == 8) {
+                if (!password.empty()) {
+                    password.pop_back();
+                    // Erase the displayed asterisk without revealing the character.
+                    std::cout << "\b \b";
+                    std::cout.flush();
+                }
+                continue;
+            }
+            if (ch == 0 || ch == 224) { (void)_getch(); continue; }
+            if (ch >= 32 && ch <= 126) {
+                password.push_back(static_cast<char>(ch));
+                std::cout << '*';
+                std::cout.flush();
+            }
+        }
+    } else {
+        // Preserve redirected stdin support for automated tests.
+        std::getline(std::cin, password);
+    }
 #else
     termios originalSettings{};
     const bool canHideInput = tcgetattr(STDIN_FILENO, &originalSettings) == 0;
@@ -77,10 +115,13 @@ ConsoleUI::ConsoleUI(AuthService& authService,
                      AdminService& adminService,
                      StudentService& studentService,
                      AssignmentService& assignmentService,
+                     ExtensionService& extensionService,
+                     NotificationService& notificationService,
                      MenuService& menuService)
     : m_authService(authService), m_submissionService(submissionService),
       m_markingService(markingService), m_moderationService(moderationService),
       m_adminService(adminService), m_studentService(studentService), m_assignmentService(assignmentService),
+      m_extensionService(extensionService), m_notificationService(notificationService),
       m_menuService(menuService) {
     initializeHandlers();
 }
@@ -92,36 +133,21 @@ void ConsoleUI::initializeHandlers() {
     m_handlers["SUBMIT_ASSIGNMENT"] = [this]() { handleSubmitAssignment(); };
     m_handlers["CHANGE_PASSWORD"] = [this]() { handleChangePassword(); };
 
-    // Placeholder handlers for unimplemented actions
+    // Register handlers for role-specific actions.
     m_handlers["CREATE_ASSIGNMENT"] = [this]() { handleCreateAssignment(); };
-    m_handlers["VIEW_ALL_SUBMISSIONS"] = [this]() {
-        std::cout << "View submissions - Not yet implemented" << std::endl;
-    };
-    m_handlers["MARK_SUBMISSION"] = [this]() {
-        std::cout << "Mark submission - Not yet implemented" << std::endl;
-    };
-    m_handlers["GRANT_EXTENSION"] = [this]() {
-        std::cout << "Grant extension - Not yet implemented" << std::endl;
-    };
-    m_handlers["VIEW_DEPT_COURSES"] = [this]() {
-        std::cout << "View courses - Not yet implemented" << std::endl;
-    };
-    m_handlers["VIEW_MARKED_SUBMISSIONS"] = [this]() {
-        std::cout << "View marked submissions - Not yet implemented" << std::endl;
-    };
-    m_handlers["MODERATE_SUBMISSION"] = [this]() {
-        std::cout << "Moderate submission - Not yet implemented" << std::endl;
-    };
-    m_handlers["RELEASE_MARKS"] = [this]() {
-        std::cout << "Release marks - Not yet implemented" << std::endl;
-    };
+    m_handlers["VIEW_ALL_SUBMISSIONS"] = [this]() { handleViewLecturerSubmissions(); };
+    m_handlers["MARK_SUBMISSION"] = [this]() { handleMarkSubmission(); };
+    m_handlers["GRANT_EXTENSION"] = [this]() { handleGrantExtension(); };
+    m_handlers["VIEW_DEPT_COURSES"] = [this]() { handleViewDepartmentCourses(); };
+    m_handlers["VIEW_MARKED_SUBMISSIONS"] = [this]() { handleReviewMarks(); };
+    m_handlers["MODERATE_SUBMISSION"] = [this]() { handleModerateMark(); };
+    m_handlers["RELEASE_MARKS"] = [this]() { handleReleaseMarks(); };
+    m_handlers["VIEW_MARK_AUDIT_LOG"] = [this]() { handleViewMarkAudit(); };
     m_handlers["CREATE_USER"] = [this]() { handleCreateUser(); };
     m_handlers["CREATE_DEPARTMENT"] = [this]() { handleCreateDepartment(); };
     m_handlers["CREATE_COURSE"] = [this]() { handleCreateCourse(); };
     m_handlers["ASSIGN_LECTURER"] = [this]() { handleAssignLecturer(); };
-    m_handlers["ENROLL_STUDENT"] = [this]() {
-        std::cout << "Enroll student - Not yet implemented" << std::endl;
-    };
+    m_handlers["ENROLL_STUDENT"] = [this]() { handleEnrollStudent(); };
 }
 
 void ConsoleUI::run() {
@@ -132,7 +158,15 @@ void ConsoleUI::run() {
     showLogin();
 
     if (m_authService.getCurrentUser()) {
-        showMainMenu();
+        if (m_authService.isPasswordChangeRequired()) {
+            std::cout << "A password change is required before continuing." << std::endl;
+            while (m_authService.getCurrentUser() && m_authService.isPasswordChangeRequired()) {
+                handleChangePassword();
+                if (m_authService.isPasswordChangeRequired())
+                    showMessage("Password change required. Press Enter to try again...");
+            }
+        }
+        if (m_authService.getCurrentUser()) showMainMenu();
     }
 }
 
@@ -140,15 +174,29 @@ void ConsoleUI::showLogin() {
     while (true) {
         std::cout << "--- Login ---" << std::endl;
         std::string username = getInput("Username: ");
-        std::string password = getInput("Password: ");
+        std::string password = readPassword("Password: ");
 
         try {
             m_authService.login(username, password);
             std::cout << "Login successful!" << std::endl;
+            if (User* user = m_authService.getCurrentUser()) {
+                try {
+                    const auto notifications = m_notificationService.listUnread(*user);
+                    for (const auto& notification : notifications) {
+                        std::cout << "Notification: " << notification.getMessage() << std::endl;
+                        m_notificationService.markRead(*user, notification.getId());
+                    }
+                } catch (const LmsException&) {
+                    std::cout << "Notifications are temporarily unavailable." << std::endl;
+                }
+            }
             showMessage("Press Enter to continue...");
             return;
         } catch (const AuthenticationException& e) {
             std::cout << "Error: " << e.what() << std::endl;
+            showMessage("Press Enter to try again...");
+        } catch (const DatabaseException&) {
+            std::cout << "Unable to access the database. Please try again." << std::endl;
             showMessage("Press Enter to try again...");
         }
     }
@@ -244,7 +292,22 @@ void ConsoleUI::clearScreen() {
 
 void ConsoleUI::handleViewCourses() {
     User* user = m_authService.getCurrentUser();
-    if (!user || user->getRole() != Role::Student) {
+    if (!user) {
+        throw AuthorisationException("Not logged in");
+    }
+    if (user->getRole() == Role::Lecturer) {
+        const auto courses = m_assignmentService.listLecturerCourses(*user);
+        if (courses.empty()) {
+            std::cout << "You are not assigned to any courses." << std::endl;
+            return;
+        }
+        std::cout << "=== My Courses ===" << std::endl;
+        for (const auto& course : courses)
+            std::cout << course.getCode() << " - " << course.getTitle() << " (enrolled students: "
+                      << m_assignmentService.getEnrolledStudentCount(*user, course.getId()) << ")" << std::endl;
+        return;
+    }
+    if (user->getRole() != Role::Student) {
         throw AuthorisationException("Only students can view their courses");
     }
 
@@ -501,10 +564,136 @@ void ConsoleUI::handleCreateAssignment() {
     }
 }
 
+void ConsoleUI::handleViewLecturerSubmissions() {
+    try {
+        User* lecturer = m_authService.getCurrentUser();
+        if (!lecturer) throw AuthorisationException("Not logged in");
+        const auto assignments = m_markingService.listAssignments(*lecturer);
+        if (assignments.empty()) {
+            std::cout << "No assignments exist in your courses." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < assignments.size(); ++i)
+            std::cout << (i + 1) << ". " << assignments[i].getTitle() << std::endl;
+        const int choice = readBoundedNumber("Select an assignment (0 to cancel): ",
+                                            static_cast<int>(assignments.size()), true);
+        if (choice == 0) return;
+        const auto& assignment = assignments[static_cast<size_t>(choice - 1)];
+        const auto submissions = m_markingService.listSubmissions(*lecturer, assignment.getId());
+        if (submissions.empty()) {
+            std::cout << "No submissions have been received for this assignment." << std::endl;
+            return;
+        }
+        for (const auto& item : submissions) {
+            std::cout << item.student << " | " << submissionStateLabel(item.submission.getState())
+                      << " | late penalty: " << item.submission.getPenaltyPercent() << "%"
+                      << " | latest version: " << (item.latestVersionSubmittedAt.empty() ? "none" : item.latestVersionSubmittedAt);
+            if (item.submission.getState() == SubmissionState::Marked ||
+                item.submission.getState() == SubmissionState::Moderated ||
+                item.submission.getState() == SubmissionState::Released)
+                std::cout << " | raw mark: " << item.submission.getRawMark();
+            std::cout << std::endl;
+        }
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to access the database. Please try again." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to view submissions: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleMarkSubmission() {
+    try {
+        User* lecturer = m_authService.getCurrentUser();
+        if (!lecturer) throw AuthorisationException("Not logged in");
+        const auto assignments = m_markingService.listAssignments(*lecturer);
+        if (assignments.empty()) {
+            std::cout << "No assignments exist in your courses." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < assignments.size(); ++i)
+            std::cout << (i + 1) << ". " << assignments[i].getTitle() << std::endl;
+        const int assignmentChoice = readBoundedNumber("Select an assignment (0 to cancel): ",
+                                                       static_cast<int>(assignments.size()), true);
+        if (assignmentChoice == 0) return;
+        const auto& assignment = assignments[static_cast<size_t>(assignmentChoice - 1)];
+        auto submissions = m_markingService.listSubmissions(*lecturer, assignment.getId());
+        submissions.erase(std::remove_if(submissions.begin(), submissions.end(), [](const auto& item) {
+            const auto state = item.submission.getState();
+            return state != SubmissionState::Submitted && state != SubmissionState::Late && state != SubmissionState::Marked;
+        }), submissions.end());
+        if (submissions.empty()) {
+            std::cout << "No submissions are ready to be marked." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < submissions.size(); ++i)
+            std::cout << (i + 1) << ". " << submissions[i].student << " ("
+                      << submissionStateLabel(submissions[i].submission.getState()) << ")" << std::endl;
+        const int submissionChoice = readBoundedNumber("Select a submission (0 to cancel): ",
+                                                       static_cast<int>(submissions.size()), true);
+        if (submissionChoice == 0) return;
+        const auto& selected = submissions[static_cast<size_t>(submissionChoice - 1)];
+        const std::string markInput = getInput("Raw mark (maximum " + std::to_string(assignment.getMaxMark()) + "): ");
+        size_t consumed = 0;
+        const double mark = std::stod(markInput, &consumed);
+        if (consumed != markInput.size()) throw ValidationException("Mark must be a number");
+        const std::string feedback = getInput("Feedback: ");
+        std::string reason = MarkingService::InitialMarkReason;
+        if (selected.submission.getState() == SubmissionState::Marked)
+            reason = getInput("Reason for revision: ");
+        m_markingService.markSubmission(*lecturer, selected.submission.getId(), mark, feedback, reason);
+        std::cout << "Submission marked successfully." << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to save the mark because of a database error." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to mark submission: " << error.what() << std::endl;
+    } catch (const std::exception&) {
+        std::cout << "Unable to mark submission: enter a valid numeric mark." << std::endl;
+    }
+}
+
+void ConsoleUI::handleGrantExtension() {
+    try {
+        User* lecturer = m_authService.getCurrentUser();
+        if (!lecturer) throw AuthorisationException("Not logged in");
+        const auto assignments = m_extensionService.listAssignments(*lecturer);
+        if (assignments.empty()) {
+            std::cout << "No assignments exist in your courses." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < assignments.size(); ++i)
+            std::cout << (i + 1) << ". " << assignments[i].getTitle() << std::endl;
+        const int assignmentChoice = readBoundedNumber("Select an assignment (0 to cancel): ",
+                                                       static_cast<int>(assignments.size()), true);
+        if (assignmentChoice == 0) return;
+        const auto& assignment = assignments[static_cast<size_t>(assignmentChoice - 1)];
+        const auto students = m_extensionService.listEnrolledStudents(*lecturer, assignment.getId());
+        if (students.empty()) {
+            std::cout << "No active students are enrolled in this course." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < students.size(); ++i)
+            std::cout << (i + 1) << ". " << students[i]->getUsername() << std::endl;
+        const int studentChoice = readBoundedNumber("Select a student (0 to cancel): ",
+                                                    static_cast<int>(students.size()), true);
+        if (studentChoice == 0) return;
+        const std::string deadline = getInput("New deadline (ISO 8601 UTC): ");
+        const std::string reason = getInput("Reason: ");
+        m_extensionService.grantExtension(*lecturer, assignment.getId(),
+            students[static_cast<size_t>(studentChoice - 1)]->getId(), deadline, reason);
+        std::cout << "Extension granted successfully." << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to save the extension because of a database error." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to grant extension: " << error.what() << std::endl;
+    }
+}
+
 void ConsoleUI::handleCreateDepartment() {
     try {
+        User* administrator = m_authService.getCurrentUser();
+        if (!administrator) throw AuthorisationException("Not logged in");
         const auto name = getInput("Department name: ");
-        const int id = m_adminService.createDepartment(name);
+        const int id = m_adminService.createDepartment(*administrator, name);
         std::cout << "Department created successfully. ID: " << id << std::endl;
     } catch (const DatabaseException&) {
         std::cout << "Unable to save the department because of a database error." << std::endl;
@@ -515,7 +704,9 @@ void ConsoleUI::handleCreateDepartment() {
 
 void ConsoleUI::handleCreateCourse() {
     try {
-        const auto departments = m_adminService.listDepartments();
+        User* administrator = m_authService.getCurrentUser();
+        if (!administrator) throw AuthorisationException("Not logged in");
+        const auto departments = m_adminService.listDepartments(*administrator);
         if (departments.empty()) {
             std::cout << "No departments exist. Create a department first." << std::endl;
             return;
@@ -524,11 +715,11 @@ void ConsoleUI::handleCreateCourse() {
         for (size_t i = 0; i < departments.size(); ++i) {
             std::cout << (i + 1) << ". " << departments[i].getName() << std::endl;
         }
-        const int selected = readBoundedNumber("Select a department: ", static_cast<int>(departments.size()));
+        const int selected = readBoundedNumber("Select a department (0 to cancel): ", static_cast<int>(departments.size()), true);
         if (selected == 0) return;
         const auto code = getInput("Course code: ");
         const auto title = getInput("Course title: ");
-        const int id = m_adminService.createCourse(code, title, departments[selected - 1].getId());
+        const int id = m_adminService.createCourse(*administrator, code, title, departments[selected - 1].getId());
         std::cout << "Course created successfully. ID: " << id << std::endl;
     } catch (const DatabaseException&) {
         std::cout << "Unable to save the course because of a database error." << std::endl;
@@ -539,16 +730,18 @@ void ConsoleUI::handleCreateCourse() {
 
 void ConsoleUI::handleCreateUser() {
     try {
+        User* administrator = m_authService.getCurrentUser();
+        if (!administrator) throw AuthorisationException("Not logged in");
         std::cout << "=== User Roles ===" << std::endl
                   << "1. Student" << std::endl << "2. Lecturer" << std::endl
                   << "3. Head of Department" << std::endl << "4. Administrator" << std::endl;
-        const int roleChoice = readBoundedNumber("Select a role: ", 4);
+        const int roleChoice = readBoundedNumber("Select a role (0 to cancel): ", 4, true);
         if (roleChoice == 0) return;
         const Role role = roleChoice == 1 ? Role::Student : roleChoice == 2 ? Role::Lecturer
             : roleChoice == 3 ? Role::HeadOfDepartment : Role::Administrator;
         int departmentId = 0;
         if (role == Role::Lecturer || role == Role::HeadOfDepartment) {
-            const auto departments = m_adminService.listDepartments();
+            const auto departments = m_adminService.listDepartments(*administrator);
             if (departments.empty()) {
                 std::cout << "No departments exist. Create a department first." << std::endl;
                 return;
@@ -557,13 +750,13 @@ void ConsoleUI::handleCreateUser() {
             for (size_t i = 0; i < departments.size(); ++i) {
                 std::cout << (i + 1) << ". " << departments[i].getName() << std::endl;
             }
-            const int selected = readBoundedNumber("Select a department: ", static_cast<int>(departments.size()));
+            const int selected = readBoundedNumber("Select a department (0 to cancel): ", static_cast<int>(departments.size()), true);
             if (selected == 0) return;
             departmentId = departments[selected - 1].getId();
         }
         const auto username = getInput("Username: ");
-        const auto password = getInput("Password: ");
-        const int id = m_adminService.createUser(username, role, password, departmentId);
+        const auto password = readPassword("Password: ");
+        const int id = m_adminService.createUser(*administrator, username, role, password, departmentId);
         std::cout << "User created successfully. ID: " << id << std::endl;
     } catch (const DatabaseException&) {
         std::cout << "Unable to save the user because of a database error." << std::endl;
@@ -574,7 +767,9 @@ void ConsoleUI::handleCreateUser() {
 
 void ConsoleUI::handleAssignLecturer() {
     try {
-        const auto courses = m_adminService.listCoursesForAssignment();
+        User* admin = m_authService.getCurrentUser();
+        if (!admin) throw AuthorisationException("Not logged in");
+        const auto courses = m_adminService.listCoursesForAssignment(*admin);
         if (courses.empty()) {
             std::cout << "No courses exist. Create a course first." << std::endl;
             return;
@@ -590,10 +785,10 @@ void ConsoleUI::handleAssignLecturer() {
             }
             std::cout << ")" << std::endl;
         }
-        const int courseChoice = readBoundedNumber("Select a course: ", static_cast<int>(courses.size()));
+        const int courseChoice = readBoundedNumber("Select a course (0 to cancel): ", static_cast<int>(courses.size()), true);
         if (courseChoice == 0) return;
 
-        const auto lecturers = m_adminService.listActiveLecturers();
+        const auto lecturers = m_adminService.listActiveLecturers(*admin);
         if (lecturers.empty()) {
             std::cout << "No lecturers exist. Create a lecturer first." << std::endl;
             return;
@@ -603,28 +798,207 @@ void ConsoleUI::handleAssignLecturer() {
             const auto* lecturer = dynamic_cast<const Lecturer*>(lecturers[i].get());
             std::string department = "unknown department";
             if (lecturer) {
-                for (const auto& item : m_adminService.listDepartments()) {
+                for (const auto& item : m_adminService.listDepartments(*admin)) {
                     if (item.getId() == lecturer->getDepartmentId()) department = item.getName();
                 }
             }
-            std::cout << (i + 1) << ". " << lecturers[i]->getUsername() << " - "
-                      << lecturers[i]->getUsername() << " (" << department << ")" << std::endl;
+            std::cout << (i + 1) << ". " << lecturers[i]->getUsername()
+                      << " (" << department << ")" << std::endl;
         }
-        const int lecturerChoice = readBoundedNumber("Select a lecturer: ", static_cast<int>(lecturers.size()));
+        const int lecturerChoice = readBoundedNumber("Select a lecturer (0 to cancel): ", static_cast<int>(lecturers.size()), true);
         if (lecturerChoice == 0) return;
         const auto& course = courses[courseChoice - 1];
         const auto& lecturer = *lecturers[lecturerChoice - 1];
         std::cout << "Assign " << lecturer.getUsername() << " to " << course.course.getCode()
                   << " - " << course.course.getTitle() << "?" << std::endl;
         if (!confirmAction()) return;
-        User* admin = m_authService.getCurrentUser();
-        if (!admin) throw AuthorisationException("Not logged in");
         m_adminService.assignLecturerToCourse(*admin, course.course.getId(), lecturer.getId());
         std::cout << "Lecturer assigned successfully." << std::endl;
     } catch (const DatabaseException&) {
         std::cout << "Unable to assign the lecturer because of a database error." << std::endl;
     } catch (const LmsException& error) {
         std::cout << "Unable to assign lecturer: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleEnrollStudent() {
+    try {
+        User* administrator = m_authService.getCurrentUser();
+        if (!administrator) throw AuthorisationException("Not logged in");
+        const auto courses = m_adminService.listCoursesForAssignment(*administrator);
+        if (courses.empty()) {
+            std::cout << "No courses exist. Create a course first." << std::endl;
+            return;
+        }
+        std::cout << "=== Courses ===" << std::endl;
+        for (size_t i = 0; i < courses.size(); ++i)
+            std::cout << (i + 1) << ". " << courses[i].course.getCode() << " - "
+                      << courses[i].course.getTitle() << " (" << courses[i].department << ")" << std::endl;
+        const int courseChoice = readBoundedNumber("Select a course (0 to cancel): ", static_cast<int>(courses.size()), true);
+        if (courseChoice == 0) return;
+
+        const auto students = m_adminService.listActiveStudents(*administrator);
+        if (students.empty()) {
+            std::cout << "No active students exist. Create a student first." << std::endl;
+            return;
+        }
+        std::cout << "=== Active Students ===" << std::endl;
+        for (size_t i = 0; i < students.size(); ++i)
+            std::cout << (i + 1) << ". " << students[i]->getUsername() << std::endl;
+        const int studentChoice = readBoundedNumber("Select a student (0 to cancel): ", static_cast<int>(students.size()), true);
+        if (studentChoice == 0) return;
+
+        const auto& course = courses[static_cast<size_t>(courseChoice - 1)].course;
+        const auto& student = *students[static_cast<size_t>(studentChoice - 1)];
+        m_adminService.enrollStudent(*administrator, course.getId(), student.getId());
+        std::cout << student.getUsername() << " enrolled in " << course.getCode() << " successfully." << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to enroll the student because of a database error." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to enroll student: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleViewDepartmentCourses() {
+    try {
+        User* hod = m_authService.getCurrentUser();
+        if (!hod) throw AuthorisationException("Not logged in");
+        const auto courses = m_moderationService.listDepartmentCourses(*hod);
+        if (courses.empty()) {
+            std::cout << "No courses exist in your department." << std::endl;
+            return;
+        }
+        std::cout << "=== Department Courses ===" << std::endl;
+        for (const auto& course : courses)
+            std::cout << course.getCode() << " - " << course.getTitle() << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to access the database. Please try again." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to view department courses: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleReviewMarks() {
+    try {
+        User* hod = m_authService.getCurrentUser();
+        if (!hod) throw AuthorisationException("Not logged in");
+        const auto reviews = m_moderationService.reviewMarkedSubmissions(*hod);
+        if (reviews.empty()) {
+            std::cout << "No marked submissions are waiting for moderation." << std::endl;
+            return;
+        }
+        std::cout << "=== Marks for Review ===" << std::endl;
+        for (const auto& review : reviews) {
+            std::cout << review.courseCode << " - " << review.assignmentTitle
+                      << "; student: " << review.student << "; lecturer: " << review.lecturer
+                      << "; raw: " << review.submission.getRawMark()
+                      << "; penalty: " << review.submission.getPenaltyPercent() << "%"
+                      << "; final: " << review.submission.getFinalMark()
+                      << "; feedback: " << review.submission.getFeedback() << std::endl;
+        }
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to access the database. Please try again." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to review marks: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleModerateMark() {
+    try {
+        User* hod = m_authService.getCurrentUser();
+        if (!hod) throw AuthorisationException("Not logged in");
+        const auto reviews = m_moderationService.reviewMarkedSubmissions(*hod);
+        if (reviews.empty()) {
+            std::cout << "No marked submissions are waiting for moderation." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < reviews.size(); ++i)
+            std::cout << (i + 1) << ". " << reviews[i].courseCode << " - "
+                      << reviews[i].assignmentTitle << " (" << reviews[i].student
+                      << ", final " << reviews[i].submission.getFinalMark() << ")" << std::endl;
+        const int choice = readBoundedNumber("Select a submission (0 to cancel): ",
+                                            static_cast<int>(reviews.size()), true);
+        if (choice == 0) return;
+        std::string decision;
+        do {
+            decision = getInput("Approve or adjust mark? (a/u): ");
+            std::transform(decision.begin(), decision.end(), decision.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        } while (decision != "a" && decision != "u");
+        const std::string reason = getInput("Reason: ");
+        const int submissionId = reviews[static_cast<size_t>(choice - 1)].submission.getId();
+        if (decision == "a") {
+            m_moderationService.approveSubmission(*hod, submissionId, reason);
+            std::cout << "Mark approved for release." << std::endl;
+            return;
+        }
+        const std::string value = getInput("Adjusted raw mark: ");
+        size_t consumed = 0;
+        const double rawMark = std::stod(value, &consumed);
+        if (consumed != value.size()) throw ValidationException("Mark must be a number");
+        m_moderationService.adjustSubmissionMark(*hod, submissionId, rawMark, reason);
+        std::cout << "Mark adjusted and approved for release." << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to save moderation because of a database error." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to moderate mark: " << error.what() << std::endl;
+    } catch (const std::exception&) {
+        std::cout << "Unable to moderate mark: enter a valid numeric mark." << std::endl;
+    }
+}
+
+void ConsoleUI::handleReleaseMarks() {
+    try {
+        User* hod = m_authService.getCurrentUser();
+        if (!hod) throw AuthorisationException("Not logged in");
+        const auto assignments = m_moderationService.listDepartmentAssignments(*hod);
+        if (assignments.empty()) {
+            std::cout << "No assignments exist in your department." << std::endl;
+            return;
+        }
+        std::cout << "=== Department Assignments ===" << std::endl;
+        for (size_t i = 0; i < assignments.size(); ++i)
+            std::cout << (i + 1) << ". " << assignments[i].getTitle() << std::endl;
+        const int choice = readBoundedNumber("Select an assignment (0 to cancel): ",
+                                            static_cast<int>(assignments.size()), true);
+        if (choice == 0) return;
+        m_moderationService.releaseAssignmentMarks(*hod, assignments[static_cast<size_t>(choice - 1)].getId());
+        std::cout << "Moderated marks released successfully." << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to release marks because of a database error." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to release marks: " << error.what() << std::endl;
+    }
+}
+
+void ConsoleUI::handleViewMarkAudit() {
+    try {
+        User* hod = m_authService.getCurrentUser();
+        if (!hod) throw AuthorisationException("Not logged in");
+        const auto assignments = m_moderationService.listDepartmentAssignments(*hod);
+        if (assignments.empty()) {
+            std::cout << "No assignments exist in your department." << std::endl;
+            return;
+        }
+        for (size_t i = 0; i < assignments.size(); ++i)
+            std::cout << (i + 1) << ". " << assignments[i].getTitle() << std::endl;
+        const int choice = readBoundedNumber("Select an assignment (0 to cancel): ",
+                                            static_cast<int>(assignments.size()), true);
+        if (choice == 0) return;
+        const auto audit = m_moderationService.auditForAssignment(
+            *hod, assignments[static_cast<size_t>(choice - 1)].getId());
+        if (audit.empty()) {
+            std::cout << "No mark changes have been recorded for this assignment." << std::endl;
+            return;
+        }
+        for (const auto& entry : audit)
+            std::cout << "submission " << entry.getSubmissionId() << "; user " << entry.getChangedByUsername()
+                      << "; " << entry.getChangedAt() << "; " << entry.getOldValue() << " -> "
+                      << entry.getNewValue() << "; reason: " << entry.getReason() << std::endl;
+    } catch (const DatabaseException&) {
+        std::cout << "Unable to access the database. Please try again." << std::endl;
+    } catch (const LmsException& error) {
+        std::cout << "Unable to view mark audit: " << error.what() << std::endl;
     }
 }
 

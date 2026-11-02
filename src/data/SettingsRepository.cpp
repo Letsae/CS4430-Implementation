@@ -102,7 +102,10 @@ void SqliteSettingsRepository::initializeDefaults() {
         set("late_penalty_percent_per_day", "10");
     }
     if (!exists("late_penalty_max_days")) {
-        set("late_penalty_max_days", "4");
+        set("late_penalty_max_days", "3");
+    } else if (get("late_penalty_max_days") == "4") {
+        // Previous builds stored four even though DR2 caps penalized periods at three.
+        set("late_penalty_max_days", "3");
     }
     if (!exists("seconds_per_day")) {
         set("seconds_per_day", "86400");
@@ -114,6 +117,9 @@ void SqliteSettingsRepository::initializeDefaults() {
     }
     if (!exists("lockout_delay_seconds")) {
         set("lockout_delay_seconds", "5");
+    }
+    if (!exists("force_password_change_user_id")) {
+        set("force_password_change_user_id", "0");
     }
 }
 

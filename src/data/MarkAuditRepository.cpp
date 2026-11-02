@@ -31,8 +31,10 @@ void SqliteMarkAuditRepository::add(const MarkAuditEntry& entry) {
 }
 
 std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getBySubmission(int submissionId) {
-    const char* sql = "SELECT id, submission_id, changed_by, changed_at, old_value, new_value, reason "
-                      "FROM mark_audit WHERE submission_id = ? ORDER BY changed_at, id;";
+    const char* sql = "SELECT a.id, a.submission_id, a.changed_by, a.changed_at, a.old_value, a.new_value, a.reason, "
+                      "COALESCE(u.username, 'Unknown user') "
+                      "FROM mark_audit a LEFT JOIN app_user u ON u.id = a.changed_by "
+                      "WHERE a.submission_id = ? ORDER BY a.changed_at;";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(m_db.get(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -51,8 +53,10 @@ std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getBySubmission(int submi
 }
 
 std::vector<MarkAuditEntry> SqliteMarkAuditRepository::getAll() {
-    const char* sql = "SELECT id, submission_id, changed_by, changed_at, old_value, new_value, reason "
-                      "FROM mark_audit ORDER BY changed_at, id;";
+    const char* sql = "SELECT a.id, a.submission_id, a.changed_by, a.changed_at, a.old_value, a.new_value, a.reason, "
+                      "COALESCE(u.username, 'Unknown user') "
+                      "FROM mark_audit a LEFT JOIN app_user u ON u.id = a.changed_by "
+                      "ORDER BY a.changed_at;";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(m_db.get(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -76,8 +80,12 @@ MarkAuditEntry SqliteMarkAuditRepository::fromRow(sqlite3_stmt* stmt) {
     double oldValue = sqlite3_column_double(stmt, 4);
     double newValue = sqlite3_column_double(stmt, 5);
     std::string reason(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
+    const auto* usernameText = sqlite3_column_text(stmt, 7);
+    std::string username = usernameText ? reinterpret_cast<const char*>(usernameText) : "Unknown user";
 
-    return MarkAuditEntry(id, submissionId, changedBy, changedAt, oldValue, newValue, reason);
+    MarkAuditEntry entry(id, submissionId, changedBy, changedAt, oldValue, newValue, reason);
+    entry.setChangedByUsername(username);
+    return entry;
 }
 
 } // namespace Lms

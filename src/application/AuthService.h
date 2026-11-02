@@ -3,8 +3,11 @@
 #include "domain/User.h"
 #include "data/UserRepository.h"
 #include "security/IPasswordHasher.h"
+#include "data/SettingsRepository.h"
+#include "util/Clock.h"
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace Lms {
 
@@ -15,6 +18,8 @@ namespace Lms {
 class AuthService {
 public:
     AuthService(IUserRepository& userRepo, IPasswordHasher& hasher);
+    AuthService(IUserRepository& userRepo, IPasswordHasher& hasher,
+                ISettingsRepository& settings, const Clock& clock);
 
     /**
      * Authenticate a user with username and password.
@@ -40,6 +45,7 @@ public:
      * Logout the current user.
      */
     void logout();
+    bool isPasswordChangeRequired() const;
 
     /**
      * Get the currently logged-in user.
@@ -49,10 +55,15 @@ public:
 private:
     IUserRepository& m_userRepo;
     IPasswordHasher& m_hasher;
+    ISettingsRepository* m_settings = nullptr;
+    SystemClock m_systemClock;
+    const Clock* m_clock = &m_systemClock;
     std::unique_ptr<User> m_currentUser;
+    std::unordered_map<std::string, int> m_failedAttempts;
+    std::unordered_map<std::string, std::chrono::system_clock::time_point> m_lockedUntil;
 
-    static const int MAX_LOGIN_ATTEMPTS = 5;
-    int m_failedAttempts = 0;
+    int settingInt(const std::string& name, int fallback) const;
+    void recordFailure(const std::string& username);
 };
 
 } // namespace Lms

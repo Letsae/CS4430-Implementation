@@ -5,12 +5,12 @@ A console-based Learning Management System for secondary schools, supporting fou
 ## Features
 - Role-based access control (Admin, Lecturer, HoD, Student)
 - Assignment creation and submission management
-- Late submission penalty calculation (10% per day for days 1-3, 100% from day 4)
+- Late submission penalty calculation (10% per started day for days 1-3, no penalty from day 4)
 - Extension granting by lecturers
 - Mark moderation by Head of Department
 - Audit trail for all mark changes (append-only)
 - SQLite database persistence with WAL mode
-- Secure password hashing with bcrypt (cost factor 12)
+- Password hashing (see the current implementation status in `docs/STATIC_ANALYSIS.md`)
 - Observer pattern for event notifications
 - State machine for submission lifecycle
 
@@ -21,15 +21,13 @@ A console-based Learning Management System for secondary schools, supporting fou
 - C++17 compatible compiler (GCC 9+, Clang 10+, or MSVC 2019+)
 - SQLite3 development library
 - GoogleTest (automatically fetched via CMake)
-- bcrypt library (automatically fetched via CMake)
 
 ### Runtime Dependencies
 - SQLite3
 
-## Building
+## Build, test, and run
 
-For full setup details, generator-specific commands, test invocation and
-troubleshooting, see [docs/BUILDING.md](docs/BUILDING.md).
+The project requires CMake 3.16+, a C++17 compiler, SQLite3, and GoogleTest (fetched by CMake).
 
 ### Linux
 ```bash
@@ -38,15 +36,10 @@ sudo apt-get update
 sudo apt-get install -y cmake g++ libsqlite3-dev
 
 # Configure and build
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-
-# Run tests
-cd build
-ctest --output-on-failure
-
-# Run application
-./build/lms_app
+ctest --test-dir build --output-on-failure
+./build/src/lms_app --db demo.db --seed-demo
 ```
 
 ### Windows (MSVC)
@@ -55,15 +48,10 @@ ctest --output-on-failure
 # Install SQLite3 from https://www.sqlite.org/download.html
 
 # Configure and build (using Visual Studio Developer Command Prompt)
-cmake -B build -G "Visual Studio 16 2019" -A x64
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Debug
-
-# Run tests
-.\build\Debug\lms_unit_tests.exe
-.\build\Debug\lms_integration_tests.exe
-
-# Run application
-.\build\Debug\lms_app.exe
+ctest --test-dir build -C Debug --output-on-failure
+.\build\src\Debug\lms_app.exe --db demo.db --seed-demo
 ```
 
 ### Build with Coverage (Linux)
@@ -83,14 +71,14 @@ lcov --list coverage.info
 Unit tests use fake in-memory repositories and test business logic in isolation.
 
 ```bash
-./build/lms_unit_tests
+./build/tests/lms_unit_tests
 ```
 
 ### Integration Tests
 Integration tests use real SQLite `:memory:` databases and test data access layer.
 
 ```bash
-./build/lms_integration_tests
+./build/tests/lms_integration_tests
 ```
 
 ### All Tests
@@ -115,21 +103,8 @@ cppcheck --enable=all --std=c++17 --suppress=missingIncludeSystem src/
 
 ## Security Justification
 
-### Password Hashing with bcrypt
-This project uses bcrypt for password hashing instead of alternatives like SHA-256 or PBKDF2 for the following reasons:
-
-1. **Adaptive cost factor**: bcrypt's cost factor can be increased as hardware improves, making it future-proof against brute-force attacks.
-2. **Built-in salt**: bcrypt automatically generates and embeds a unique salt in the hash string, eliminating salt management errors.
-3. **Memory-hard**: bcrypt is designed to be slow and memory-intensive, making GPU/ASIC attacks expensive.
-4. **Battle-tested**: bcrypt has been in use since 1999 and is widely trusted by security professionals.
-5. **Simple API**: The bcrypt hash string contains all necessary parameters (salt, cost, hash), simplifying storage and verification.
-
-### Library Choice
-We use the `trgl/bcrypt` library (v1.0.0) which:
-- Is actively maintained and regularly audited
-- Follows the official bcrypt specification
-- Has a stable API with pinned version in CMake
-- Provides constant-time password verification to prevent timing attacks
+### Password Hashing
+Bcrypt was selected because its adjustable work factor slows offline guessing and its encoded hash embeds a unique salt. The application uses the vendored `libbcrypt` implementation; its configured work factor and embedded salts are exercised by the password hasher tests. Bcrypt is intentionally not described as memory-hard.
 
 ### Password Policy
 - Minimum length: 8 characters

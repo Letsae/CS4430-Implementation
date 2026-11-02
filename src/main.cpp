@@ -12,6 +12,7 @@
 #include "data/SettingsRepository.h"
 #include "data/MenuRepository.h"
 #include "data/NotificationRepository.h"
+#include "data/DemoSeedRepository.h"
 #include "application/AuthService.h"
 #include "application/SubmissionService.h"
 #include "application/MarkingService.h"
@@ -20,6 +21,7 @@
 #include "application/StudentService.h"
 #include "application/MenuService.h"
 #include "application/AssignmentService.h"
+#include "application/ExtensionService.h"
 #include "application/NotificationService.h"
 #include "security/BcryptPasswordHasher.h"
 #include "domain/LatePenaltyStrategy.h"
@@ -31,8 +33,22 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+#include <random>
 
 using namespace Lms;
+
+namespace {
+std::string makeOneTimeDemoPassword() {
+    constexpr char alphabet[] = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    constexpr size_t passwordLength = 32;
+    std::random_device random;
+    std::uniform_int_distribution<size_t> select(0, sizeof(alphabet) - 2);
+    std::string password;
+    password.reserve(passwordLength);
+    for (size_t i = 0; i < passwordLength; ++i) password.push_back(alphabet[select(random)]);
+    return password;
+}
+}
 
 void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " [options]\n"
@@ -98,42 +114,48 @@ int main(int argc, char* argv[]) {
 
         // Initialize utilities
         SystemClock clock;
-        int bcryptCost = std::stoi(settingsRepo.getWithDefault("bcrypt_cost", "12"));
-        BcryptPasswordHasher hasher(bcryptCost);
-        StandardLatePenalty penaltyStrategy;
+        const int bcryptCost = std::stoi(settingsRepo.getWithDefault("bcrypt_cost", "12"));
+        const auto passwordMinLength = static_cast<size_t>(std::stoull(
+            settingsRepo.getWithDefault("password_min_length", "8")));
+        const auto passwordMaxLength = static_cast<size_t>(std::stoull(
+            settingsRepo.getWithDefault("password_max_length", "72")));
+        BcryptPasswordHasher hasher(bcryptCost, passwordMinLength, passwordMaxLength);
+        const double latePenaltyPercent = std::stod(settingsRepo.getWithDefault("late_penalty_percent_per_day", "10"));
+        const int latePenaltyDays = std::stoi(settingsRepo.getWithDefault("late_penalty_max_days", "3"));
+        const int secondsPerDay = std::stoi(settingsRepo.getWithDefault("seconds_per_day", "86400"));
+        StandardLatePenalty penaltyStrategy(latePenaltyPercent, latePenaltyDays, secondsPerDay);
         EventPublisher eventPublisher;
         auto notificationService = std::make_shared<NotificationService>(enrolmentRepo, notificationRepo, clock);
         eventPublisher.subscribe(notificationService);
 
         // Initialize services
-        AuthService authService(userRepo, hasher);
+        AuthService authService(userRepo, hasher, settingsRepo, clock);
         SubmissionService submissionService(submissionRepo, assignmentRepo, extensionRepo, eventPublisher, clock);
-        MarkingService markingService(submissionRepo, auditRepo, assignmentRepo, extensionRepo, penaltyStrategy, eventPublisher, clock);
-        ModerationService moderationService(submissionRepo, auditRepo, eventPublisher, clock);
-        AdminService adminService(userRepo, departmentRepo, courseRepo, enrolmentRepo, hasher, db, eventPublisher);
-        StudentService studentService(courseRepo, assignmentRepo, submissionRepo, versionRepo, extensionRepo, departmentRepo, userRepo, clock);
+        MarkingService markingService(db, submissionRepo, auditRepo, assignmentRepo, courseRepo,
+                                      versionRepo, userRepo, extensionRepo, penaltyStrategy,
+                                      eventPublisher, clock);
+        ModerationService moderationService(db, submissionRepo, auditRepo, courseRepo, assignmentRepo,
+                                            userRepo, eventPublisher, clock);
+        AdminService adminService(userRepo, departmentRepo, courseRepo, enrolmentRepo, hasher, db, eventPublisher, clock);
+        StudentService studentService(db, courseRepo, assignmentRepo, submissionRepo, versionRepo,
+            extensionRepo, departmentRepo, userRepo, settingsRepo, penaltyStrategy, eventPublisher, clock);
         AssignmentService assignmentService(db, courseRepo, assignmentRepo, eventPublisher, clock);
+        ExtensionService extensionService(db, assignmentRepo, courseRepo, enrolmentRepo, extensionRepo,
+                                           userRepo, eventPublisher, clock);
         MenuService menuService(menuRepo);
 
         // Load optional seed records from a data file rather than embedding demo rows in application code.
         if (seedDemo) {
             auto departments = departmentRepo.getAll();
             if (departments.empty()) {
-                std::ifstream seedFile(LMS_DEMO_SEED_PATH);
-                if (!seedFile.is_open()) throw DatabaseException("Could not open configured demo seed file");
+                DemoSeedRepository seedRepository(db);
+                seedRepository.loadSqlFile(LMS_DEMO_SEED_PATH);
                 std::unordered_map<std::string, int> departmentIds;
                 std::unordered_map<std::string, int> userIds;
                 std::unordered_map<std::string, int> courseIds;
                 int seedAdministratorId = 0;
-                std::vector<std::vector<std::string>> records;
-                std::string line;
-                while (std::getline(seedFile, line)) {
-                    std::vector<std::string> fields;
-                    std::stringstream row(line);
-                    std::string field;
-                    while (std::getline(row, field, '|')) fields.push_back(field);
-                    if (!fields.empty()) records.push_back(std::move(fields));
-                }
+                const std::string demoPassword = makeOneTimeDemoPassword();
+                const auto records = seedRepository.getRecords();
                 const auto roleFromSeed = [](const std::string& role) {
                     if (role == "STUDENT") return Role::Student;
                     if (role == "LECTURER") return Role::Lecturer;
@@ -148,36 +170,41 @@ int main(int argc, char* argv[]) {
                     return found->second;
                 };
                 for (const auto& record : records) {
-                    if (record[0] == "D" && record.size() == 2)
-                        departmentIds.emplace(record[1], adminService.createDepartment(record[1]));
+                    if (record.kind == "D")
+                        departmentIds.emplace(record.first, adminService.createSeedDepartment(record.first));
                 }
                 for (const auto& record : records) {
-                    if (record[0] == "U" && record.size() == 5) {
-                        const Role role = roleFromSeed(record[2]);
-                        const int id = adminService.createUser(record[1], role, record[4], departmentIdFor(record[3]));
-                        userIds.emplace(record[1], id);
+                    if (record.kind == "U") {
+                        const Role role = roleFromSeed(record.second);
+                        const int id = adminService.createSeedUser(record.first, role, demoPassword,
+                            departmentIdFor(record.third));
+                        userIds.emplace(record.first, id);
                         if (role == Role::Administrator && seedAdministratorId == 0) seedAdministratorId = id;
                     }
                 }
                 for (const auto& record : records) {
-                    if (record[0] == "C" && record.size() == 4)
-                        courseIds.emplace(record[1], adminService.createCourse(record[1], record[2], departmentIdFor(record[3])));
+                    if (record.kind == "C")
+                        courseIds.emplace(record.first, adminService.createSeedCourse(record.first,
+                            record.second, departmentIdFor(record.third)));
                 }
                 auto seedAdmin = userRepo.getById(seedAdministratorId);
                 for (const auto& record : records) {
-                    if (record[0] == "L" && record.size() == 3)
-                        adminService.assignLecturerToCourse(*seedAdmin, courseIds.at(record[1]), userIds.at(record[2]));
-                    else if (record[0] == "E" && record.size() == 3)
-                        adminService.enrollStudent(courseIds.at(record[1]), userIds.at(record[2]));
+                    if (record.kind == "L")
+                        adminService.assignLecturerToCourse(*seedAdmin, courseIds.at(record.first), userIds.at(record.second));
+                    else if (record.kind == "E")
+                        adminService.enrollStudent(*seedAdmin, courseIds.at(record.first), userIds.at(record.second));
                 }
-                std::cout << "Demo data loaded successfully." << std::endl;
+                settingsRepo.set("force_password_change_user_id", std::to_string(seedAdministratorId));
+                std::cout << "Demo data loaded. Temporary shared demo password: " << demoPassword << std::endl;
+                std::cout << "The administrator must change this password at first login." << std::endl;
             } else {
                 std::cout << "Demo data already exists." << std::endl;
             }
         }
 
         // Initialize and run UI
-        ConsoleUI ui(authService, submissionService, markingService, moderationService, adminService, studentService, assignmentService, menuService);
+        ConsoleUI ui(authService, submissionService, markingService, moderationService, adminService,
+                     studentService, assignmentService, extensionService, *notificationService, menuService);
         ui.run();
 
         return 0;

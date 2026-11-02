@@ -9,6 +9,8 @@
 #include "application/AdminService.h"
 #include "application/StudentService.h"
 #include "application/AssignmentService.h"
+#include "application/ExtensionService.h"
+#include "application/NotificationService.h"
 #include "application/MenuService.h"
 #include <memory>
 #include <functional>
@@ -28,6 +30,8 @@ public:
               AdminService& adminService,
               StudentService& studentService,
               AssignmentService& assignmentService,
+              ExtensionService& extensionService,
+              NotificationService& notificationService,
               MenuService& menuService);
 
     /**
@@ -43,6 +47,8 @@ private:
     AdminService& m_adminService;
     StudentService& m_studentService;
     AssignmentService& m_assignmentService;
+    ExtensionService& m_extensionService;
+    NotificationService& m_notificationService;
     MenuService& m_menuService;
 
     // Action handler registry
@@ -80,10 +86,19 @@ private:
 
     /** Handle lecturer assignment creation. */
     void handleCreateAssignment();
+    void handleViewLecturerSubmissions();
+    void handleMarkSubmission();
+    void handleGrantExtension();
     void handleCreateUser();
     void handleCreateDepartment();
     void handleCreateCourse();
     void handleAssignLecturer();
+    void handleEnrollStudent();
+    void handleViewDepartmentCourses();
+    void handleReviewMarks();
+    void handleModerateMark();
+    void handleReleaseMarks();
+    void handleViewMarkAudit();
 
     /**
      * Handle "Change Password" for all users.

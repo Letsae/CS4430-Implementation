@@ -2,7 +2,9 @@
 #include "application/AuthService.h"
 #include "data/UserRepository.h"
 #include "data/Database.h"
+#include "data/SettingsRepository.h"
 #include "security/BcryptPasswordHasher.h"
+#include "util/Clock.h"
 #include "support/SchemaPath.h"
 #include <fstream>
 
@@ -22,8 +24,12 @@ protected:
         m_db->execute(schema.str());
 
         m_userRepo = std::make_unique<SqliteUserRepository>(*m_db);
-        m_hasher = std::make_unique<BcryptPasswordHasher>(12);
-        m_authService = std::make_unique<AuthService>(*m_userRepo, *m_hasher);
+        m_settingsRepo = std::make_unique<SqliteSettingsRepository>(*m_db);
+        m_settingsRepo->initializeDefaults();
+        m_settingsRepo->set("lockout_delay_seconds", "3600");
+        m_hasher = std::make_unique<BcryptPasswordHasher>(4);
+        m_authService = std::make_unique<AuthService>(*m_userRepo, *m_hasher,
+                                                      *m_settingsRepo, m_clock);
 
         // Create a test user
         std::string password = "TestPassword123";
@@ -33,8 +39,10 @@ protected:
 
     std::unique_ptr<Database> m_db;
     std::unique_ptr<SqliteUserRepository> m_userRepo;
+    std::unique_ptr<SqliteSettingsRepository> m_settingsRepo;
     std::unique_ptr<BcryptPasswordHasher> m_hasher;
     std::unique_ptr<AuthService> m_authService;
+    SystemClock m_clock;
     int m_testUserId;
 };
 
@@ -99,8 +107,21 @@ TEST_F(AuthServiceTest, LoginLockoutAfterFiveFailures) {
         );
     }
 
-    // The 6th attempt should work (after delay), but we can't easily test the delay in unit tests
-    // Just verify that the mechanism is in place
+    EXPECT_THROW(m_authService->login("testuser", "TestPassword123"), AuthenticationException);
+}
+
+TEST_F(AuthServiceTest, ForcesBootstrapPasswordChangeAndClearsTheRequirement) {
+    m_settingsRepo->set("force_password_change_user_id", std::to_string(m_testUserId));
+    m_authService->login("testuser", "TestPassword123");
+    EXPECT_TRUE(m_authService->isPasswordChangeRequired());
+
+    m_authService->changePassword(m_testUserId, "TestPassword123", "ChangedPassword456",
+                                  "ChangedPassword456");
+    EXPECT_FALSE(m_authService->isPasswordChangeRequired());
+}
+
+TEST_F(AuthServiceTest, InvalidLengthLoginPasswordUsesGenericAuthenticationFailure) {
+    EXPECT_THROW(m_authService->login("testuser", "short"), AuthenticationException);
 }
 
 TEST_F(AuthServiceTest, FailedAttemptsResetAfterSuccessfulLogin) {

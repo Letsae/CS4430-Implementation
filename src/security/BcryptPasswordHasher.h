@@ -3,6 +3,7 @@
 #include "IPasswordHasher.h"
 #include "domain/LmsException.h"
 #include <string>
+#include <cstddef>
 
 // Forward declaration for bcrypt structure
 struct bcrypt_context;
@@ -19,13 +20,16 @@ public:
      * Constructor with configurable cost factor.
      * @param cost Bcrypt cost factor (4-31, default 12)
      */
-    explicit BcryptPasswordHasher(int cost = 12);
+    explicit BcryptPasswordHasher(int cost = 12, size_t minimumLength = 8,
+                                  size_t maximumLength = 72);
 
     std::string hashPassword(const std::string& password) override;
     bool verifyPassword(const std::string& password, const std::string& hash) override;
 
 private:
     int m_cost;
+    size_t m_minimumLength;
+    size_t m_maximumLength;
 
     void validatePasswordLength(const std::string& password);
 };

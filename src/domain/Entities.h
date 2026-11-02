@@ -208,6 +208,9 @@ public:
     double getOldValue() const { return m_oldValue; }
     double getNewValue() const { return m_newValue; }
     const std::string& getReason() const { return m_reason; }
+    // Username resolved from app_user for readable audit-log display.
+    const std::string& getChangedByUsername() const { return m_changedByUsername; }
+    void setChangedByUsername(const std::string& username) { m_changedByUsername = username; }
 
     void setId(int id) { m_id = id; }
     void setSubmissionId(int submissionId) { m_submissionId = submissionId; }
@@ -225,6 +228,7 @@ private:
     double m_oldValue = 0.0;
     double m_newValue = 0.0;
     std::string m_reason;
+    std::string m_changedByUsername;
 };
 
 /**

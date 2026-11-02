@@ -6,7 +6,7 @@ using namespace Lms;
 
 class BcryptPasswordHasherTest : public ::testing::Test {
 protected:
-    BcryptPasswordHasher m_hasher;
+    BcryptPasswordHasher m_hasher{4};
 };
 
 TEST_F(BcryptPasswordHasherTest, HashesPasswordSuccessfully) {
@@ -15,7 +15,8 @@ TEST_F(BcryptPasswordHasherTest, HashesPasswordSuccessfully) {
 
     EXPECT_FALSE(hash.empty());
     EXPECT_NE(hash, password);
-    EXPECT_TRUE(hash.find("$simple$") == 0); // Simple hash prefix
+    EXPECT_TRUE(hash.rfind("$2", 0) == 0);
+    EXPECT_EQ(hash.size(), 60u);
 }
 
 TEST_F(BcryptPasswordHasherTest, VerifiesCorrectPassword) {
@@ -31,6 +32,10 @@ TEST_F(BcryptPasswordHasherTest, RejectsIncorrectPassword) {
     std::string hash = m_hasher.hashPassword(password);
 
     EXPECT_FALSE(m_hasher.verifyPassword(wrongPassword, hash));
+}
+
+TEST_F(BcryptPasswordHasherTest, RejectsMalformedEncodedHash) {
+    EXPECT_FALSE(m_hasher.verifyPassword("SecurePassword123", "not-a-bcrypt-hash"));
 }
 
 TEST_F(BcryptPasswordHasherTest, DifferentHashesForSamePassword) {

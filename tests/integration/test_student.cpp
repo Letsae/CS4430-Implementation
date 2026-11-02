@@ -13,6 +13,8 @@
 #include "domain/User.h"
 #include "util/Clock.h"
 #include <memory>
+#include <array>
+#include <chrono>
 
 using namespace Lms;
 
@@ -195,4 +197,41 @@ TEST_F(StudentServiceIntegrationTest, SubmitRejectsNotEnrolled) {
     // student3 is not enrolled in any course
     const int student3Id = userRepo->saveWithPassword("student3", Role::Student, "test-hash", departmentId);
     EXPECT_THROW(studentService->submit(student3Id, assignmentId, "Some content"), AuthorisationException);
+}
+
+TEST_F(StudentServiceIntegrationTest, DeadlineAndExtensionBoundariesUseStartedDays) {
+    constexpr char kOriginalDeadline[] = "2024-01-20T10:00:00Z";
+    constexpr char kExtensionDeadline[] = "2024-01-21T10:00:00Z";
+    constexpr char kSubmissionContent[] = "boundary submission";
+    constexpr std::array<long long, 7> kOffsetsSeconds{
+        0, 1, 24 * 60 * 60, 24 * 60 * 60 + 1, 48 * 60 * 60, 72 * 60 * 60,
+        72 * 60 * 60 + 1};
+    constexpr std::array<double, 7> kExpectedPenaltyPercent{0, 10, 10, 20, 20, 30, 0};
+
+    int assignmentSequence = 0;
+    for (bool withExtension : {false, true}) {
+        const std::string effectiveDeadline = withExtension ? kExtensionDeadline : kOriginalDeadline;
+        const auto deadlineTime = TimeUtils::fromIsoString(effectiveDeadline);
+        for (size_t boundary = 0; boundary < kOffsetsSeconds.size(); ++boundary) {
+            const std::string title = "Deadline boundary " + std::to_string(++assignmentSequence);
+            const int boundaryAssignmentId = assignmentRepo->save(Assignment(0, courseId, title,
+                kOriginalDeadline, 100.0, lecturerId));
+            if (withExtension) {
+                extensionRepo->save(Extension(0, boundaryAssignmentId, student1Id,
+                    kExtensionDeadline, "approved test extension", lecturerId));
+            }
+            const auto now = deadlineTime + std::chrono::seconds(kOffsetsSeconds[boundary]);
+            FixedClock boundaryClock(now);
+            StudentService boundaryService(*courseRepo, *assignmentRepo, *submissionRepo,
+                *versionRepo, *extensionRepo, *departmentRepo, *userRepo, boundaryClock);
+            boundaryService.submit(student1Id, boundaryAssignmentId, kSubmissionContent);
+            const auto submission = submissionRepo->getByAssignmentAndStudent(
+                boundaryAssignmentId, student1Id);
+            const bool isLate = kOffsetsSeconds[boundary] > 0;
+            EXPECT_EQ(submission->getState(), isLate ? SubmissionState::Late : SubmissionState::Submitted)
+                << "withExtension=" << withExtension << ", offset=" << kOffsetsSeconds[boundary];
+            EXPECT_DOUBLE_EQ(submission->getPenaltyPercent(), kExpectedPenaltyPercent[boundary])
+                << "withExtension=" << withExtension << ", offset=" << kOffsetsSeconds[boundary];
+        }
+    }
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(lms VERSION 1.0.0 LANGUAGES CXX)
+project(lms VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +23,20 @@ FetchContent_Declare(
   GIT_TAG release-1.12.1
 )
 FetchContent_MakeAvailable(googletest)
+
+# Vendored Openwall bcrypt implementation (wrapper MIT license; bcrypt
+# algorithm sources carry their upstream public-domain/CC0 notices).
+add_library(lms_bcrypt STATIC
+  third_party/libbcrypt/src/bcrypt.c
+  third_party/libbcrypt/src/crypt_blowfish.c
+  third_party/libbcrypt/src/crypt_gensalt.c
+  third_party/libbcrypt/src/wrapper.c
+)
+target_include_directories(lms_bcrypt PUBLIC third_party/libbcrypt/include)
+target_include_directories(lms_bcrypt PRIVATE third_party/libbcrypt/src)
+if(WIN32)
+  target_link_libraries(lms_bcrypt PUBLIC advapi32)
+endif()
 
 # Add subdirectories
 add_subdirectory(src)
