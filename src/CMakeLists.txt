@@ -20,8 +20,12 @@ target_include_directories(lms_core PUBLIC
 )
 
 target_link_libraries(lms_core PUBLIC
-    SQLite3::SQLite3
+    ${SQLite3_LIBRARIES}
     lms_bcrypt
+)
+
+target_include_directories(lms_core PUBLIC
+    ${SQLite3_INCLUDE_DIRS}
 )
 
 # Create lms_app executable
