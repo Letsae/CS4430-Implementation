@@ -1,0 +1,173 @@
+# Regression test evidence - v1.1.0 (after CR1)
+Date: 2026-11-03
+Harness: sandbox build (Ubuntu 24.04, g++ 13.3, C++17, system libsqlite3 3.45.1, real db/schema.sql, real bcrypt sources).
+GoogleTest was not installable offline, so a minimal GoogleTest-compatible shim (TEST/TEST_F/EXPECT_*/ASSERT_*) ran the
+UNMODIFIED test sources. Re-run the official CMake/GoogleTest build with `ctest --test-dir build --output-on-failure`
+to reproduce these results with the real framework before tagging.
+
+Suite totals: 162 tests ran, 162 passed, 0 failed  (unit 113, integration 49)
+Pre-existing tests re-run unchanged: 135/135 passed. New CR1 tests: 27/27 passed.
+Mutation check: deliberately breaking the class-grant logic (no 'never shorten' guard, no transaction) made 3 new tests fail, so they detect regressions.
+
+[     OK ] AdminAssignmentIntegrationTest.AssignmentEnablementFlowsToEnrolledStudentWithoutStudentCodeChanges
+[     OK ] AdminAssignmentIntegrationTest.EnrollsOnlyActiveStudentsOnceWithInjectedClockTimestamp
+[     OK ] AdminAssignmentIntegrationTest.NotificationFailureRollsBackLecturerAssignment
+[     OK ] AdminAssignmentIntegrationTest.ParameterizedCourseTextIsStoredLiterally
+[     OK ] AdminAssignmentIntegrationTest.PersistsAssignmentAndNotifiesTheLecturer
+[     OK ] AdminAssignmentServiceTest.AssignsLecturerAndPublishesExactlyOnce
+[     OK ] AdminAssignmentServiceTest.RejectsDuplicateWithoutPublishingAgain
+[     OK ] AdminAssignmentServiceTest.RejectsNonAdministratorWithoutPublishing
+[     OK ] AdminAssignmentServiceTest.RejectsNonLecturerInactiveLecturerAndDepartmentMismatch
+[     OK ] AdminAssignmentServiceTest.RejectsUnknownCourseOrUser
+[     OK ] AdministratorPermissions.CanAssignLecturer
+[     OK ] AdministratorPermissions.CanCreateDepartment
+[     OK ] AdministratorPermissions.CanCreateUser
+[     OK ] AdministratorPermissions.CannotMarkSubmission
+[     OK ] AssignmentCreationIntegrationTest.NotificationFailureRollsBackAssignment
+[     OK ] AssignmentCreationIntegrationTest.PersistsNotifiesAndIsVisibleAndSubmittableToEnrolledStudent
+[     OK ] AssignmentCreationIntegrationTest.StoresSqlInjectionTextLiterallyAndAssignmentTableSurvives
+[     OK ] AssignmentServiceUnitTest.AcceptsDeadlineOneSecondInFuture
+[     OK ] AssignmentServiceUnitTest.CreatesAssignmentAndPublishesOnce
+[     OK ] AssignmentServiceUnitTest.DoesNotPublishOnValidationFailure
+[     OK ] AssignmentServiceUnitTest.RejectsBlankAndOverlongTitles
+[     OK ] AssignmentServiceUnitTest.RejectsDuplicateCaseInsensitiveTrimmedTitle
+[     OK ] AssignmentServiceUnitTest.RejectsInvalidDeadlineFormatAndDate
+[     OK ] AssignmentServiceUnitTest.RejectsLecturerOfDifferentCourse
+[     OK ] AssignmentServiceUnitTest.RejectsNonLecturerRoles
+[     OK ] AssignmentServiceUnitTest.RejectsPastAndEqualDeadlines
+[     OK ] AssignmentServiceUnitTest.RejectsUnknownCourse
+[     OK ] AssignmentServiceUnitTest.ValidatesMaximumMarkBoundsAndPrecision
+[     OK ] AuthServiceTest.ChangePasswordWithCorrectOldPassword
+[     OK ] AuthServiceTest.ChangePasswordWithIncorrectOldPassword
+[     OK ] AuthServiceTest.FailedAttemptsResetAfterSuccessfulLogin
+[     OK ] AuthServiceTest.ForcesBootstrapPasswordChangeAndClearsTheRequirement
+[     OK ] AuthServiceTest.InvalidLengthLoginPasswordUsesGenericAuthenticationFailure
+[     OK ] AuthServiceTest.LoginLockoutAfterFiveFailures
+[     OK ] AuthServiceTest.LoginWithCorrectCredentials
+[     OK ] AuthServiceTest.LoginWithIncorrectPassword
+[     OK ] AuthServiceTest.LoginWithNonExistentUser
+[     OK ] AuthServiceTest.LogoutClearsCurrentUser
+[     OK ] BcryptPasswordHasherCost.AcceptsValidCostFactor
+[     OK ] BcryptPasswordHasherCost.RejectsInvalidCostFactor
+[     OK ] BcryptPasswordHasherTest.AcceptsMaximumLengthPassword
+[     OK ] BcryptPasswordHasherTest.AcceptsMinimumLengthPassword
+[     OK ] BcryptPasswordHasherTest.DifferentHashesForSamePassword
+[     OK ] BcryptPasswordHasherTest.HashesPasswordSuccessfully
+[     OK ] BcryptPasswordHasherTest.RejectsIncorrectPassword
+[     OK ] BcryptPasswordHasherTest.RejectsLongPassword
+[     OK ] BcryptPasswordHasherTest.RejectsMalformedEncodedHash
+[     OK ] BcryptPasswordHasherTest.RejectsShortPassword
+[     OK ] BcryptPasswordHasherTest.VerifiesCorrectPassword
+[     OK ] ClassExtensionIntegrationTest.ClassGrantCreatesOneExtensionPerEnrolledStudent   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantDoesNotTouchOtherCoursesOrOtherAssignments   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantIsAtomicWhenAnObserverFailsMidway   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantNeverShortensAnExistingLaterExtension   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantNotifiesEachAffectedStudentOnce   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantRejectedWhenNobodyWouldGetALaterDeadline   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantRejectsBadInputAndWrongLecturerWithoutSavingAnything   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantSkipsInactiveStudents   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.ClassGrantUpdatesEarlierExtensionsInPlace   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.SingleGrantStillAffectsOnlyThatStudent   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.StudentListShowsExtensionOnlyToAffectedStudents   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.StudentListShowsOriginalExtendedDeadlineAndReason   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.StudentListUnchangedForUnextendedAssignments   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.StudentOutsideTheClassStillUsesOriginalDeadline   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.SubmissionBetweenOriginalAndClassDeadlineIsOnTime   <-- NEW (CR1)
+[     OK ] ClassExtensionIntegrationTest.SubmissionOneSecondAfterClassDeadlineIsLateWithFirstDayPenalty   <-- NEW (CR1)
+[     OK ] Clock.SystemClockReturnsValidIsoString
+[     OK ] DatabaseIntegrationTest.AssignmentRepositoryCrud
+[     OK ] DatabaseIntegrationTest.CourseRepositoryCrud
+[     OK ] DatabaseIntegrationTest.CreatesDatabaseSuccessfully
+[     OK ] DatabaseIntegrationTest.DepartmentRepositoryCrud
+[     OK ] DatabaseIntegrationTest.MarkAuditRepositoryAppendOnly
+[     OK ] DatabaseIntegrationTest.SubmissionRepositoryCrud
+[     OK ] DatabaseIntegrationTest.TransactionGuardCommitsOnSuccess
+[     OK ] DatabaseIntegrationTest.TransactionGuardRollbacksOnException
+[     OK ] EmptyTest.Placeholder
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsEmptyDeadline   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsEmptyOrBlankReason   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsInactiveLecturer   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsLecturerOfAnotherCourse   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsNonLecturer   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsUnknownAssignment   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.ClassExtensionRejectsWhenNoStudentsEnrolled   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.SingleGrantStillRejectsDeadlineNotLaterThanCurrent   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.SingleGrantStillRejectsEmptyReasonAndNotEnrolled   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.SingleGrantStillSavesOneExtensionAndPublishesOnce   <-- NEW (CR1)
+[     OK ] ExtensionServiceUnitTest.SingleGrantStudentChecksStillPrecedeInputValidation   <-- NEW (CR1)
+[     OK ] FixedClock.MultipleCallsReturnSameTime
+[     OK ] FixedClock.ReturnsFixedTime
+[     OK ] HeadOfDepartment.GetDepartmentId
+[     OK ] HeadOfDepartmentPermissions.CanModerateSubmission
+[     OK ] HeadOfDepartmentPermissions.CanReleaseMarks
+[     OK ] HeadOfDepartmentPermissions.CannotCreateAssignment
+[     OK ] IsValidTransition.ReturnsFalseForInvalidTransitions
+[     OK ] IsValidTransition.ReturnsTrueForValidTransitions
+[     OK ] Lecturer.GetDepartmentId
+[     OK ] LecturerPermissions.CanCreateAssignment
+[     OK ] LecturerPermissions.CanGrantExtension
+[     OK ] LecturerPermissions.CanMarkSubmission
+[     OK ] LecturerPermissions.CannotModerateSubmission
+[     OK ] MarkingServiceIntegrationTest.EnforcesRoleCourseAndValueBoundariesWithoutEvents
+[     OK ] MarkingServiceIntegrationTest.MarksLateSubmissionAndAuditsRevision
+[     OK ] MenuGolden.ExistingRoleActionsMatchBaseline
+[     OK ] ModerationWorkflowIntegrationTest.EndToEndWorkflow
+[     OK ] ModerationWorkflowIntegrationTest.ModeratesScopesAuditsAndReleasesToStudents
+[     OK ] ModerationWorkflowIntegrationTest.ReleaseRollsBackWhenStudentNotificationFails
+[     OK ] NoLatePenalty.AlwaysZero
+[     OK ] PenaltyStrategyTest.24HoursAndOneSecondLate_TwoDayPenalty
+[     OK ] PenaltyStrategyTest.48HoursLate_TwoDayPenalty
+[     OK ] PenaltyStrategyTest.72HoursAndOneSecondLate_ZeroMark
+[     OK ] PenaltyStrategyTest.72HoursLate_ThreeDayPenalty
+[     OK ] PenaltyStrategyTest.AtDeadline_NoPenalty
+[     OK ] PenaltyStrategyTest.DifferentMaxMark_PenaltyPercentageSame
+[     OK ] PenaltyStrategyTest.EarlySubmission_NoPenalty
+[     OK ] PenaltyStrategyTest.Exactly24HoursLate_OneDayPenalty
+[     OK ] PenaltyStrategyTest.FourDaysLate_ZeroMark
+[     OK ] PenaltyStrategyTest.OneSecondLate_OneDayPenalty
+[     OK ] StateToString.ReturnsCorrectStrings
+[     OK ] StudentPermissions.CanLogin
+[     OK ] StudentPermissions.CanSubmitAssignment
+[     OK ] StudentPermissions.CannotCreateAssignment
+[     OK ] StudentPermissions.CannotMarkSubmission
+[     OK ] StudentServiceIntegrationTest.DeadlineAndExtensionBoundariesUseStartedDays
+[     OK ] StudentServiceIntegrationTest.EffectiveDeadlineWithExtension
+[     OK ] StudentServiceIntegrationTest.ListCoursesReturnsEmptyForUnenrolledStudent
+[     OK ] StudentServiceIntegrationTest.ListCoursesReturnsOnlyEnrolledCourses
+[     OK ] StudentServiceIntegrationTest.ListSubmissionsReturnsEmptyForStudentWithNoSubmissions
+[     OK ] StudentServiceIntegrationTest.ListSubmissionsReturnsOnlyStudentSubmissions
+[     OK ] StudentServiceIntegrationTest.MarkAndFeedbackHiddenWhenNotReleased
+[     OK ] StudentServiceIntegrationTest.MarkAndFeedbackShownWhenReleased
+[     OK ] StudentServiceIntegrationTest.SubmitRejectsEmptyContent
+[     OK ] StudentServiceIntegrationTest.SubmitRejectsNotEnrolled
+[     OK ] StudentServiceIntegrationTest.SubmitRejectsTooLongContent
+[     OK ] StudentServiceUnitTest.AssignmentStateReflectsOwnSubmissionOnly
+[     OK ] StudentServiceUnitTest.EffectiveDeadlineUsesStudentExtension
+[     OK ] StudentServiceUnitTest.EffectiveDeadlineWithoutExtensionIsAssignmentDeadline
+[     OK ] StudentServiceUnitTest.ExtensionForAnotherStudentIsIgnored
+[     OK ] StudentServiceUnitTest.ListCoursesDoesNotIncludeOtherStudentsCourses
+[     OK ] StudentServiceUnitTest.ListCoursesEmptyWhenNotEnrolled
+[     OK ] StudentServiceUnitTest.ListCoursesReturnsOnlyOwnEnrolments
+[     OK ] SubmissionStateMachineTest.InvalidTransition_LateToReleased
+[     OK ] SubmissionStateMachineTest.InvalidTransition_MarkedToSubmitted
+[     OK ] SubmissionStateMachineTest.InvalidTransition_ModeratedToMarked
+[     OK ] SubmissionStateMachineTest.InvalidTransition_NotSubmittedToMarked
+[     OK ] SubmissionStateMachineTest.InvalidTransition_ReleasedToMarked
+[     OK ] SubmissionStateMachineTest.InvalidTransition_SelfTransition
+[     OK ] SubmissionStateMachineTest.InvalidTransition_SubmittedToLate
+[     OK ] SubmissionStateMachineTest.InvalidTransition_SubmittedToReleased
+[     OK ] SubmissionStateMachineTest.ValidTransition_LateToMarked
+[     OK ] SubmissionStateMachineTest.ValidTransition_MarkedToModerated
+[     OK ] SubmissionStateMachineTest.ValidTransition_MarkedToReleased
+[     OK ] SubmissionStateMachineTest.ValidTransition_ModeratedToReleased
+[     OK ] SubmissionStateMachineTest.ValidTransition_NotSubmittedToLate
+[     OK ] SubmissionStateMachineTest.ValidTransition_NotSubmittedToSubmitted
+[     OK ] SubmissionStateMachineTest.ValidTransition_SubmittedToMarked
+[     OK ] TimeUtils.FromIsoStringInvalid
+[     OK ] TimeUtils.FromIsoStringInvalidFormat
+[     OK ] TimeUtils.FromIsoStringValid
+[     OK ] TimeUtils.ToIsoString
+[     OK ] UserFactory.CreatesAdministrator
+[     OK ] UserFactory.CreatesHeadOfDepartment
+[     OK ] UserFactory.CreatesLecturer
+[     OK ] UserFactory.CreatesStudent
