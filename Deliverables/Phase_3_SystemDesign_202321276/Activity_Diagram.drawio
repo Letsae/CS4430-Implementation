@@ -1,0 +1,137 @@
+<mxfile host="Electron">
+  <diagram id="04_activity_swimlanes" name="Activity diagram">
+    <mxGraphModel dx="2110" dy="1075" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c3" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="Student" vertex="1">
+          <mxGeometry height="1060" width="300" x="40" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="System" vertex="1">
+          <mxGeometry height="1060" width="300" x="340" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="Lecturer" vertex="1">
+          <mxGeometry height="1060" width="300" x="640" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="c6" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=30;" value="HoD" vertex="1">
+          <mxGeometry height="1060" width="300" x="940" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" parent="c6" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Adjust mark&lt;br&gt;with reason" vertex="1">
+          <mxGeometry height="50" width="120" x="20" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="s0" parent="1" style="ellipse;fillColor=#0050ef;strokeColor=#001DBC;fontColor=#ffffff;" value="" vertex="1">
+          <mxGeometry height="26" width="26" x="165" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Upload work" vertex="1">
+          <mxGeometry height="44" width="150" x="104" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="On or before&lt;br&gt;effective deadline?" vertex="1">
+          <mxGeometry height="80" width="180" x="380" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="State = Submitted" vertex="1">
+          <mxGeometry height="44" width="120" x="350" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="State = Late" vertex="1">
+          <mxGeometry height="44" width="110" x="480" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Apply late penalty&lt;br&gt;via Strategy" vertex="1">
+          <mxGeometry height="50" width="120" x="475" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Enter mark and&lt;br&gt;written feedback" vertex="1">
+          <mxGeometry height="50" width="160" x="690" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="b5" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Write audit record" vertex="1">
+          <mxGeometry height="44" width="140" x="410" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Review all marks&lt;br&gt;in department" vertex="1">
+          <mxGeometry height="50" width="160" x="990" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Accept mark?" vertex="1">
+          <mxGeometry height="70" width="150" x="995" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Release approved&lt;br&gt;marks" vertex="1">
+          <mxGeometry height="50" width="120" x="1090" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="b6" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="Notify student&lt;br&gt;of release" vertex="1">
+          <mxGeometry height="50" width="140" x="410" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="a7" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;" value="View released mark&lt;br&gt;and feedback" vertex="1">
+          <mxGeometry height="50" width="160" x="99" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="end" parent="1" style="shape=endState;fillColor=#0050ef;strokeColor=#001DBC;fontColor=#ffffff;" value="" vertex="1">
+          <mxGeometry height="26" width="26" x="165" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" source="s0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="a2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" source="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" source="b1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b2" value="yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" source="b1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b3" value="no">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" source="b3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" source="b2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="c1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="380" />
+              <mxPoint x="770" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" source="b4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="c1" value="">
+          <mxGeometry relative="1" x="0.2105" as="geometry" />
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" source="c1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" source="b5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="d1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="d2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="d4" value="yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c18" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="d3" value="no">
+          <mxGeometry relative="1" x="0.1818" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="845" />
+              <mxPoint x="1010" y="845" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" edge="1" parent="1" source="d4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b6" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="940" />
+              <mxPoint x="480" y="940" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c20" edge="1" parent="1" source="b6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="a7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c21" edge="1" parent="1" source="a7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="end" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c22" edge="1" parent="1" source="d3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="b5" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="990" y="840" />
+              <mxPoint x="870" y="840" />
+              <mxPoint x="870" y="680" />
+              <mxPoint x="480" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

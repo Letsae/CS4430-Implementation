@@ -1,0 +1,88 @@
+<mxfile host="Electron">
+  <diagram id="03_state_machine_submission" name="Submission state machine">
+    <mxGraphModel dx="4074" dy="3706" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="i" parent="1" style="ellipse;fillColor=#0050ef;strokeColor=#001DBC;fontColor=#ffffff;" value="" vertex="1">
+          <mxGeometry height="24" width="24" x="1303" y="-1000" as="geometry" />
+        </mxCell>
+        <mxCell id="NS" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="NotSubmitted" vertex="1">
+          <mxGeometry height="54" width="130" x="1250" y="-620" as="geometry" />
+        </mxCell>
+        <mxCell id="Su" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="Submitted" vertex="1">
+          <mxGeometry height="54" width="130" x="740" y="-316" as="geometry" />
+        </mxCell>
+        <mxCell id="La" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="Late" vertex="1">
+          <mxGeometry height="54" width="130" x="1640" y="-280" as="geometry" />
+        </mxCell>
+        <mxCell id="Ma" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="Marked" vertex="1">
+          <mxGeometry height="54" width="130" x="1100" y="-280" as="geometry" />
+        </mxCell>
+        <mxCell id="Mo" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="Moderated" vertex="1">
+          <mxGeometry height="54" width="130" x="1100" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="Re" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;" value="Released" vertex="1">
+          <mxGeometry height="54" width="130" x="1100" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="f" parent="1" style="shape=endState;fillColor=#0050ef;strokeColor=#001DBC;fontColor=#ffffff;" value="" vertex="1">
+          <mxGeometry height="28" width="28" x="1151" y="557" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" source="i" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="NS" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" source="NS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="Su" value="submit&lt;br&gt;[now &amp;lt;= effective deadline]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" source="NS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="La" value="submit&lt;br&gt;[now &amp;gt; effective deadline]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" source="Su" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="Ma" value="lecturer marks">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" source="La" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="Ma" value="lecturer marks,&lt;br&gt;penalty applied">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" source="Ma" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" target="Mo" value="HoD approves or adjusts,&lt;br&gt;audit written">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" source="Mo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="Re" value="HoD releases">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" source="Re" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=1;" target="f" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="lecture revises mark, audit written" vertex="1">
+          <mxGeometry height="30" width="120" x="1370" y="-180" as="geometry" />
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-4" edge="1" parent="1" source="juyx021Dr-nBBsb95lZ7-2" style="endArrow=none;html=1;rounded=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="Ma" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1340" y="-170" as="sourcePoint" />
+            <mxPoint x="1390" y="-220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-5" edge="1" parent="1" source="juyx021Dr-nBBsb95lZ7-2" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" target="Ma" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1340" y="-170" as="sourcePoint" />
+            <mxPoint x="1390" y="-220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="resubmit[now &amp;lt;= effective deadline]" vertex="1">
+          <mxGeometry height="30" width="110" x="760" y="-210" as="geometry" />
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-7" edge="1" parent="1" source="Su" style="endArrow=none;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.368;entryY=-0.117;entryDx=0;entryDy=0;entryPerimeter=0;" target="juyx021Dr-nBBsb95lZ7-6" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1050" y="-230" as="sourcePoint" />
+            <mxPoint x="1100" y="-280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="juyx021Dr-nBBsb95lZ7-8" edge="1" parent="1" source="juyx021Dr-nBBsb95lZ7-6" style="endArrow=classic;html=1;rounded=0;exitX=0.39;exitY=-0.117;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" target="Su" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1050" y="-230" as="sourcePoint" />
+            <mxPoint x="1100" y="-280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

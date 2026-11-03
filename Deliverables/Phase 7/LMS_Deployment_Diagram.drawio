@@ -1,0 +1,87 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
+  <diagram id="lms-deployment-v1" name="LMS Deployment Diagram">
+    <mxGraphModel dx="1013" dy="516" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="schoolpc" value="School Computer (Windows 11)&lt;br&gt;&lt;b&gt;Deployment Node&lt;/b&gt;" style="swimlane;html=1;rounded=1;whiteSpace=wrap;fontStyle=1;startSize=30;" parent="1" vertex="1">
+          <mxGeometry x="300" y="100" width="570" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="runtime" value="C++17 Runtime Environment" style="swimlane;html=1;rounded=1;whiteSpace=wrap;startSize=30;" parent="schoolpc" vertex="1">
+          <mxGeometry x="30" y="50" width="510" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="lmsapp" value="Moderated LMS&lt;br&gt;&lt;b&gt;Console Application&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;" parent="runtime" vertex="1">
+          <mxGeometry x="130" y="55" width="250" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="auth" value="Authentication &amp;amp; Role Services" style="rounded=1;whiteSpace=wrap;html=1;" parent="runtime" vertex="1">
+          <mxGeometry x="130" y="145" width="250" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="services" value="LMS Application Services&lt;br&gt;(Assignment, Submission, Marking, Moderation)" style="rounded=1;whiteSpace=wrap;html=1;" parent="runtime" vertex="1">
+          <mxGeometry x="100" y="225" width="310" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="repos" value="Repository / Data Access Layer" style="rounded=1;whiteSpace=wrap;html=1;" parent="runtime" vertex="1">
+          <mxGeometry x="130" y="310" width="250" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="endArrow=block;html=1;strokeWidth=1.5;" parent="runtime" source="lmsapp" target="auth" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="endArrow=block;html=1;strokeWidth=1.5;" parent="runtime" source="auth" target="services" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="endArrow=block;html=1;strokeWidth=1.5;" parent="runtime" source="services" target="repos" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="SQLite Database&lt;br&gt;&lt;b&gt;lms.db&lt;/b&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fontSize=13;" parent="schoolpc" vertex="1">
+          <mxGeometry x="180" y="440" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="SQL / SQLite access" style="endArrow=block;html=1;strokeWidth=1.5;" parent="schoolpc" source="repos" target="db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" value="Administrator" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="170" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lecturer" value="Lecturer" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="280" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="hod" value="Head of Department (HoD)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="390" width="170" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="student" value="Student" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="500" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_admin" value="uses" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;" parent="1" source="admin" target="lmsapp" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="197" />
+              <mxPoint x="250" y="185" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_lecturer" value="uses" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;" parent="1" source="lecturer" target="lmsapp" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="307" />
+              <mxPoint x="260" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_hod" value="uses" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;" parent="1" source="hod" target="lmsapp" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="417" />
+              <mxPoint x="270" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_student" value="uses" style="endArrow=block;html=1;rounded=0;strokeWidth=1.5;" parent="1" source="student" target="lmsapp" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="270" y="527" />
+              <mxPoint x="290" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

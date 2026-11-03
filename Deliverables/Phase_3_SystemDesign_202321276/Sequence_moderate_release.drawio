@@ -1,0 +1,164 @@
+<mxfile host="Electron">
+  <diagram id="06_sequence_moderate_release" name="Sequence: Moderate and release marks">
+    <mxGraphModel dx="2086" dy="462" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c3" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="open department marks">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="105" y="130" as="sourcePoint" />
+            <mxPoint x="275" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="listMarks(hodId, departmentId)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="170" as="sourcePoint" />
+            <mxPoint x="445" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="findMarkedByDepartment(departmentId)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="210" as="sourcePoint" />
+            <mxPoint x="615" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;" value="submissions in state Marked">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="615" y="250" as="sourcePoint" />
+            <mxPoint x="445" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;" value="marks list">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="290" as="sourcePoint" />
+            <mxPoint x="275" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c8" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="new mark and reason">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="105" y="358" as="sourcePoint" />
+            <mxPoint x="275" y="358" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="moderate(hodId, submissionId, newMark, reason)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="398" as="sourcePoint" />
+            <mxPoint x="445" y="398" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c10" edge="1" parent="1" style="html=1;align=left;verticalAlign=middle;endArrow=block;endFill=1;labelPosition=right;verticalLabelPosition=middle;" value="check HoD owns department, 0 &amp;lt;= mark &amp;lt;= max">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="475" y="438" />
+              <mxPoint x="475" y="460" />
+            </Array>
+            <mxPoint x="445" y="438" as="sourcePoint" />
+            <mxPoint x="445" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="save(audit: who, when, old, new, reason)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="478" as="sourcePoint" />
+            <mxPoint x="785" y="478" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="update(state Moderated)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="518" as="sourcePoint" />
+            <mxPoint x="615" y="518" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="moderate(hodId, submissionId, sameMark, reason)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="572" as="sourcePoint" />
+            <mxPoint x="445" y="572" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="update(state Moderated)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="612" as="sourcePoint" />
+            <mxPoint x="615" y="612" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="release approved marks">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="105" y="652" as="sourcePoint" />
+            <mxPoint x="275" y="652" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="release(hodId, assignmentId)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="692" as="sourcePoint" />
+            <mxPoint x="445" y="692" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c17" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="update all Moderated to Released (one transaction)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="732" as="sourcePoint" />
+            <mxPoint x="615" y="732" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="publish(MarksReleased)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="445" y="772" as="sourcePoint" />
+            <mxPoint x="955" y="772" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;" value="update(MarksReleased)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="955" y="812" as="sourcePoint" />
+            <mxPoint x="1125" y="812" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c20" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;" value="confirmation, students notified">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1125" y="852" as="sourcePoint" />
+            <mxPoint x="105" y="852" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c21" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="HoD" vertex="1">
+          <mxGeometry height="872" width="130" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c22" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="ConsoleUI" vertex="1">
+          <mxGeometry height="872" width="130" x="210" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c23" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="ModerationService" vertex="1">
+          <mxGeometry height="872" width="130" x="380" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c24" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="SubmissionRepo" vertex="1">
+          <mxGeometry height="872" width="130" x="550" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c25" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="AuditRepo" vertex="1">
+          <mxGeometry height="872" width="130" x="720" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c26" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="EventPublisher" vertex="1">
+          <mxGeometry height="872" width="130" x="890" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c27" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" value="NotificationService" vertex="1">
+          <mxGeometry height="872" width="130" x="1060" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c28" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=50;height=22;fillColor=none;strokeColor=#333333;" value="alt&lt;br&gt;" vertex="1">
+          <mxGeometry height="324" width="1174" x="28" y="322" as="geometry" />
+        </mxCell>
+        <mxCell id="c29" parent="1" style="text;html=1;align=left;verticalAlign=middle;" value="[adjust mark]" vertex="1">
+          <mxGeometry height="18" width="300" x="84" y="324" as="geometry" />
+        </mxCell>
+        <mxCell id="c30" edge="1" parent="1" style="html=1;dashed=1;endArrow=none;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="28" y="550" as="sourcePoint" />
+            <mxPoint x="1202" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c31" parent="1" style="text;html=1;align=left;verticalAlign=middle;" value="[approve]" vertex="1">
+          <mxGeometry height="18" width="300" x="34" y="551" as="geometry" />
+        </mxCell>
+        <mxCell id="c32" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=50;height=22;fillColor=none;strokeColor=#333333;" value="loop&lt;br&gt;" vertex="1">
+          <mxGeometry height="338" width="1190" x="20" y="308" as="geometry" />
+        </mxCell>
+        <mxCell id="c33" parent="1" style="text;html=1;align=left;verticalAlign=middle;" value="[each submission]" vertex="1">
+          <mxGeometry height="18" width="300" x="76" y="310" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
