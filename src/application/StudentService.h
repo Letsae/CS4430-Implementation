@@ -29,6 +29,7 @@ struct AssignmentInfo {
     std::string deadline;
     std::string effectiveDeadline;
     bool hasExtension;
+    std::string extensionReason; // v1.1 (CR1): reason recorded with the extension, empty if none
     double maxMark;
     std::string state; // "NotSubmitted", "Submitted", "Late", "Marked", "Moderated", "Released"
     int versionCount;

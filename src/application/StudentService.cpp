@@ -91,6 +91,10 @@ std::vector<CourseInfo> StudentService::listCourses(int studentId) {
             assignInfo.deadline = assignment.getDeadline();
             assignInfo.effectiveDeadline = getEffectiveDeadline(assignment.getId(), studentId);
             assignInfo.hasExtension = (assignInfo.effectiveDeadline != assignment.getDeadline());
+            if (assignInfo.hasExtension) {
+                if (auto extension = m_extensionRepo.getByAssignmentAndStudent(assignment.getId(), studentId))
+                    assignInfo.extensionReason = extension->getReason();
+            }
             assignInfo.maxMark = assignment.getMaxMark();
 
             try {

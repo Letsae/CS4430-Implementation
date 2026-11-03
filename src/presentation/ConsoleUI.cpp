@@ -354,9 +354,12 @@ void ConsoleUI::handleViewCourses() {
         std::cout << "- " << assignment.title << std::endl;
         std::cout << "  Deadline: " << assignment.effectiveDeadline;
         if (assignment.hasExtension) {
-            std::cout << " (extended)";
+            std::cout << " (extended from " << assignment.deadline << ")";
         }
         std::cout << std::endl;
+        if (assignment.hasExtension && !assignment.extensionReason.empty()) {
+            std::cout << "  Extension reason: " << assignment.extensionReason << std::endl;
+        }
         std::cout << "  Max Mark: " << assignment.maxMark << std::endl;
         std::cout << "  State: " << assignment.state << std::endl;
         std::cout << std::endl;
@@ -666,6 +669,24 @@ void ConsoleUI::handleGrantExtension() {
                                                        static_cast<int>(assignments.size()), true);
         if (assignmentChoice == 0) return;
         const auto& assignment = assignments[static_cast<size_t>(assignmentChoice - 1)];
+        std::cout << "1. One student" << std::endl;
+        std::cout << "2. Whole class (every active student enrolled in the course)" << std::endl;
+        const int scope = readBoundedNumber("Apply extension to (0 to cancel): ", 2, true);
+        if (scope == 0) return;
+        if (scope == 2) {
+            const std::string deadline = getInput("New deadline (ISO 8601 UTC): ");
+            const std::string reason = getInput("Reason: ");
+            const auto result = m_extensionService.grantClassExtension(
+                *lecturer, assignment.getId(), deadline, reason);
+            std::cout << "Class extension applied to " << result.affected() << " student(s) ("
+                      << result.granted << " new, " << result.updated << " updated)." << std::endl;
+            if (result.skippedAlreadyLater > 0)
+                std::cout << result.skippedAlreadyLater
+                          << " student(s) already had the same or a later deadline and were left unchanged." << std::endl;
+            if (result.skippedInactive > 0)
+                std::cout << result.skippedInactive << " inactive student(s) were skipped." << std::endl;
+            return;
+        }
         const auto students = m_extensionService.listEnrolledStudents(*lecturer, assignment.getId());
         if (students.empty()) {
             std::cout << "No active students are enrolled in this course." << std::endl;

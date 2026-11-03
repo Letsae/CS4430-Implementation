@@ -6,7 +6,7 @@ A console-based Learning Management System for secondary schools, supporting fou
 - Role-based access control (Admin, Lecturer, HoD, Student)
 - Assignment creation and submission management
 - Late submission penalty calculation (10% per started day for days 1-3, no penalty from day 4)
-- Extension granting by lecturers
+- Extension granting by lecturers, for one student or a whole class (v1.1); extensions are shown on the student's assignment list
 - Mark moderation by Head of Department
 - Audit trail for all mark changes (append-only)
 - SQLite database persistence with WAL mode

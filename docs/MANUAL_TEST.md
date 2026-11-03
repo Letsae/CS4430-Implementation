@@ -7,6 +7,9 @@ Use a clean database and start the app with `--seed-demo` to load the sample dep
 3. Sign in as the Lecturer. Open **View My Courses**, create an assignment with a future deadline and maximum mark, then open **View Submissions** to confirm it is initially empty.
 4. Sign in as the Student. Open **View My Courses**, submit before the deadline, then submit a second version. Confirm **View My Submissions** reports the latest version and no mark.
 5. After the deadline, submit with a second student and confirm the submission is flagged late. Give a third student an extension through the Lecturer workflow and submit after the original deadline but before the extension.
+   - 5a. (v1.1 / CR1) As the Lecturer choose **Grant Extension**, select the assignment, choose **2. Whole class**, enter a later ISO 8601 UTC deadline and a reason. Confirm the summary reports every enrolled student as extended. Repeat with the same deadline and confirm it is rejected (nobody would receive a later deadline).
+   - 5b. (v1.1 / CR1) Sign in as an enrolled Student, open **View My Courses**, select the course, and confirm the assignment shows `(extended from <original>)` and `Extension reason: ...`. Submit after the original deadline but before the class deadline and confirm it is on time.
+   - 5c. (v1.1 / CR1) Choose **Grant Extension -> 1. One student** for a different assignment and confirm only that student is extended.
 6. Sign in as the Lecturer, mark each submission with feedback, and revise one mark with a reason. Confirm the submissions list shows the states and penalty values.
 7. Sign in as the HoD. Review the department's marked work, approve one result and adjust another with a reason. Check the mark audit log.
 8. Release the assignment's moderated marks. Sign in as each Student and confirm feedback and marks appear only after release.
