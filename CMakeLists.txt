@@ -46,10 +46,13 @@ target_include_directories(lms_bcrypt PUBLIC
 target_include_directories(lms_bcrypt PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/src
 )
-if(WIN32)
-  target_link_libraries(lms_bcrypt PUBLIC advapi32)
+# Non-Windows: the C sources include "bcrypt.h", "crypt_blowfish.h" and "crypt_gensalt.h" directly.
+# Skipped on Windows, where a "bcrypt.h" on the include path would shadow the system CNG header.
+if(NOT WIN32)
+  target_include_directories(lms_bcrypt PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libbcrypt/include/bcrypt
+  )
 endif()
-
 # Add subdirectories
 add_subdirectory(src)
 add_subdirectory(tests)
